@@ -1,0 +1,11 @@
+{
+  "name": "Zebene's World",
+  "description": "Global assembly uniting humanity across 7 sovereign chambers with live multilingual AI translation, virtual seats, video conference, knowledge horizons, digital wedding hall, charity funds, and civic economy.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

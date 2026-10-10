@@ -1,0 +1,35 @@
+{
+  "name": "Zebene's World (ዘበነ የመሰረተው አለም)",
+  "short_name": "Zebene World",
+  "description": "Global assembly uniting humanity across 7 sovereign chambers with live multilingual AI translation, virtual numbered seats, HD video conference, knowledge horizons, digital wedding hall, charity funds, and civic economy.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "communication", "education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "House of All Nations",
+      "short_name": "Chamber 1",
+      "description": "Open Global Plenary Assembly",
+      "url": "/?chamber=1",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Wedding Hall",
+      "short_name": "Chamber 5",
+      "description": "Digital Nuptial Registry",
+      "url": "/?chamber=5",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ]
+}

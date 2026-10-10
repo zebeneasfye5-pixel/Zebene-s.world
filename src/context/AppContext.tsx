@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserProfile, Seat, ChamberMessage, ChamberInfo } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { UserProfile, Seat, ChamberMessage, ChamberInfo, ChamberMemberRegistration } from '../types';
 import { CHAMBERS } from '../data/chambers';
 import { translateText, checkSecurityAndPeace } from '../services/api';
 import { speakText } from '../services/speech';
@@ -60,6 +60,22 @@ interface AppContextType {
   makeDonation: (projectId: string, amountBirr: number) => boolean;
   isRegistrationOpen: boolean;
   setIsRegistrationOpen: (open: boolean) => void;
+
+  // Dedicated Per-Chamber Member Registry
+  chamberRegistrations: Record<number, ChamberMemberRegistration | null>;
+  chamberMembersRegistry: Record<number, ChamberMemberRegistration[]>;
+  registerInChamber: (
+    chamberCode: number,
+    details: { registeredRole: string; chamberSpecificData: Record<string, string> }
+  ) => ChamberMemberRegistration;
+
+  // High-Definition Video & Camera Stream Management
+  activeCameraStream: MediaStream | null;
+  cameraStatus: 'idle' | 'starting' | 'active' | 'denied' | 'error';
+  cameraFacingMode: 'user' | 'environment';
+  toggleCameraFacingMode: () => void;
+  startUserCamera: () => Promise<MediaStream | null>;
+  stopUserCamera: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -101,6 +117,155 @@ function createInitialSeats(count: number = 32): Seat[] {
   return seats;
 }
 
+// Initial seed members across all 7 houses
+function createSeedMembers(): Record<number, ChamberMemberRegistration[]> {
+  return {
+    1: [
+      {
+        badgeId: 'CH1-DELEGATE-1001',
+        chamberCode: 1,
+        userId: 'usr-zebene',
+        fullName: 'Zebene Asfaw',
+        nationality: 'Ethiopia 🇪🇹',
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Plenary Assembly Convener',
+        chamberSpecificData: {
+          delegationField: 'Technology & Human Civilization',
+          representation: 'Global Pan-Human Congress',
+          speakingMandate: 'Universal Brotherhood & Scientific Progress'
+        },
+        registrationDate: '2026-01-10',
+        isVerified: true
+      },
+      {
+        badgeId: 'CH1-DELEGATE-1002',
+        chamberCode: 1,
+        userId: 'usr-amina',
+        fullName: 'Dr. Amina Diallo',
+        nationality: 'Senegal 🇸🇳',
+        photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'African Education Delegate',
+        chamberSpecificData: {
+          delegationField: 'Sustainable Agro-Economy',
+          representation: 'West African Knowledge Hub',
+          speakingMandate: 'Equitable Resource Distribution'
+        },
+        registrationDate: '2026-01-12',
+        isVerified: true
+      }
+    ],
+    2: [
+      {
+        badgeId: 'CH2-LINEAGE-2001',
+        chamberCode: 2,
+        userId: 'usr-k1',
+        fullName: 'Ato Solomon Tessema',
+        nationality: 'Ethiopia 🇪🇹',
+        photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Clan Patriarch & Chronicler',
+        chamberSpecificData: {
+          paternalClan: 'Shewa Tessema Lineage',
+          maternalClan: 'Wollo Wolde-Yesus Branch',
+          ancestralOrigin: 'Northern & Central Highlands',
+          clanPledge: 'Perpetual Family Mutual Protection'
+        },
+        registrationDate: '2026-01-15',
+        isVerified: true
+      }
+    ],
+    3: [
+      {
+        badgeId: 'CH3-STATE-3001',
+        chamberCode: 3,
+        userId: 'usr-st1',
+        fullName: 'Ambassador Daniel Wright',
+        nationality: 'UK 🇬🇧',
+        photoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Plenipotentiary Envoy',
+        chamberSpecificData: {
+          diplomaticRank: 'Special Envoy for Multilateral Cooperation',
+          jurisdiction: 'Trans-Regional Energy Corridors',
+          securityClearance: 'Class-A Sovereign Diplomatic'
+        },
+        registrationDate: '2026-01-18',
+        isVerified: true
+      }
+    ],
+    4: [
+      {
+        badgeId: 'CH4-SECRET-4001',
+        chamberCode: 4,
+        userId: 'usr-sec1',
+        fullName: 'Discreet Matrimony Counselor',
+        nationality: 'Global 🌐',
+        photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Confidential Matchmaker & Mediator',
+        chamberSpecificData: {
+          anonymousCodeName: 'Guardian-07',
+          serviceFocus: 'Sacred Courtship & Pre-Marital Guidance',
+          ndaPledge: 'Zero-Knowledge Cryptographic Confidentiality'
+        },
+        registrationDate: '2026-01-20',
+        isVerified: true
+      }
+    ],
+    5: [
+      {
+        badgeId: 'CH5-NUPTIAL-5001',
+        chamberCode: 5,
+        userId: 'usr-wed1',
+        fullName: 'Elder Gabriel Wolde',
+        nationality: 'Ethiopia 🇪🇹',
+        photoUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Presiding Elder (አጋቢ ሽማግሌ)',
+        chamberSpecificData: {
+          eldershipOrder: 'High Council of Nuptial Arbitrators',
+          marriageTradition: 'Ethiopian & International Harmonized Law',
+          blessingJurisdiction: 'Global Digital Nuptial Cathedral'
+        },
+        registrationDate: '2026-01-22',
+        isVerified: true
+      }
+    ],
+    6: [
+      {
+        badgeId: 'CH6-FAITH-6001',
+        chamberCode: 6,
+        userId: 'usr-f1',
+        fullName: 'Abba Yohannes & Ustaz Bilal',
+        nationality: 'Global 🌐',
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Interfaith Fellowship Guide',
+        chamberSpecificData: {
+          spiritualTradition: 'Interfaith Peace & Theistic Harmony',
+          theologicalCalling: 'Scriptural Studies on Mercy and Love',
+          moralCovenant: 'Uncompromising Respect for All Sacred Beliefs'
+        },
+        registrationDate: '2026-01-25',
+        isVerified: true
+      }
+    ],
+    7: [
+      {
+        badgeId: 'CH7-PEACE-7001',
+        chamberCode: 7,
+        userId: 'usr-sec-guard',
+        fullName: 'Commander Bereket Hailu',
+        nationality: 'International Peace Council 🕊️',
+        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'Chief Peacekeeper & Civility Commissioner',
+        chamberSpecificData: {
+          officerBadgeNumber: 'UN-IPC-8842',
+          securitySector: 'Chambers Anti-Disturbance Radar',
+          dutyOath: 'Preserving Order, Human Dignity & Universal Law'
+        },
+        registrationDate: '2026-01-28',
+        isVerified: true
+      }
+    ]
+  };
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('zw_user_profile');
@@ -130,10 +295,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [autoSpeechEnabled, setAutoSpeechEnabled] = useState<boolean>(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState<boolean>(false);
 
+  // Per-Chamber Member Registrations (Saved in local storage)
+  const [chamberRegistrations, setChamberRegistrations] = useState<Record<number, ChamberMemberRegistration | null>>(() => {
+    const saved = localStorage.getItem('zw_chamber_registrations');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    // Automatically register user in House 1 by default so they can explore immediately
+    return {
+      1: {
+        badgeId: 'CH1-DELEGATE-9821',
+        chamberCode: 1,
+        userId: 'usr-101',
+        fullName: 'Global Citizen',
+        nationality: 'Ethiopia 🇪🇹',
+        photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        registeredRole: 'General Citizen Assembly Delegate',
+        chamberSpecificData: {
+          delegationField: 'Technology, Science & Global Progress',
+          representation: 'Citizen Sovereign Assembly',
+          speakingMandate: 'Civilized Discourse & Universal Brotherhood'
+        },
+        registrationDate: '2026-10-09',
+        isVerified: true
+      },
+      2: null,
+      3: null,
+      4: null,
+      5: null,
+      6: null,
+      7: null
+    };
+  });
+
+  const [chamberMembersRegistry, setChamberMembersRegistry] = useState<Record<number, ChamberMemberRegistration[]>>(() => {
+    const saved = localStorage.getItem('zw_chamber_members_list');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return createSeedMembers();
+  });
+
+  // Dedicated High-Definition Camera Stream
+  const [activeCameraStream, setActiveCameraStream] = useState<MediaStream | null>(null);
+  const [cameraStatus, setCameraStatus] = useState<'idle' | 'starting' | 'active' | 'denied' | 'error'>('idle');
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+
   // Hardware states
   const [myCurrentSeat, setMyCurrentSeat] = useState<number | null>(null);
   const [isMyMicOn, setIsMyMicOn] = useState<boolean>(false);
-  const [isMyVideoOn, setIsMyVideoOn] = useState<boolean>(true);
+  const [isMyVideoOn, setIsMyVideoOn] = useState<boolean>(false);
 
   // ISOLATED seats per chamber
   const [seatsByChamber, setSeatsByChamber] = useState<Record<number, Seat[]>>({
@@ -281,7 +492,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ],
   });
 
-  // Private Founder Vault (Secretly secured with PIN/Passcode as dictated in prompt!)
+  // Private Founder Vault (Secretly secured with PIN/Passcode)
   const [founderVaultUnlocked, setFounderVaultUnlocked] = useState(false);
   const [founderVaultStats, setFounderVaultStats] = useState({
     totalPlatformVolumeBirr: 4892000.0,
@@ -295,10 +506,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const seats = seatsByChamber[activeChamberCode] || [];
   const messages = messagesByChamber[activeChamberCode] || [];
 
-  // Key press listener for 1 to 7 quick dialing!
+  // Key press listener for 1 to 7 quick dialing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input or textarea
       if (
         ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName) ||
         (e.target as HTMLElement)?.isContentEditable
@@ -324,10 +534,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // High-Definition Camera Management
+  const startUserCamera = useCallback(async (): Promise<MediaStream | null> => {
+    try {
+      setCameraStatus('starting');
+      // High-definition front-facing constraints
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: cameraFacingMode,
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 },
+          frameRate: { ideal: 30 }
+        },
+        audio: false
+      };
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (hdErr) {
+        // Fallback to standard video if ideal resolution is refused by simple webcams
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      setActiveCameraStream(stream);
+      setIsMyVideoOn(true);
+      setCameraStatus('active');
+      return stream;
+    } catch (err: any) {
+      console.warn('Camera permission denied or camera device missing:', err);
+      setCameraStatus('denied');
+      return null;
+    }
+  }, [cameraFacingMode]);
+
+  const stopUserCamera = useCallback(() => {
+    if (activeCameraStream) {
+      activeCameraStream.getTracks().forEach((track) => track.stop());
+      setActiveCameraStream(null);
+    }
+    setIsMyVideoOn(false);
+    setCameraStatus('idle');
+  }, [activeCameraStream]);
+
+  const toggleCameraFacingMode = useCallback(() => {
+    const nextMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+    setCameraFacingMode(nextMode);
+    if (isMyVideoOn) {
+      stopUserCamera();
+      setTimeout(() => {
+        startUserCamera();
+      }, 200);
+    }
+  }, [cameraFacingMode, isMyVideoOn, startUserCamera, stopUserCamera]);
+
   const claimSeat = (seatNumber: number) => {
     setSeatsByChamber((prev) => {
       const currentChamberSeats = [...(prev[activeChamberCode] || [])];
-      // Free any seat previously held by user in this chamber
       const updated = currentChamberSeats.map((seat) => {
         if (seat.occupiedBy?.userId === currentUser.id) {
           return { ...seat, occupiedBy: null };
@@ -373,7 +636,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleMic = () => {
     setIsMyMicOn((prev) => {
       const next = !prev;
-      // Sync seat audio state
       if (myCurrentSeat !== null) {
         setSeatsByChamber((old) => ({
           ...old,
@@ -389,20 +651,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleVideo = () => {
-    setIsMyVideoOn((prev) => {
-      const next = !prev;
-      if (myCurrentSeat !== null) {
-        setSeatsByChamber((old) => ({
-          ...old,
-          [activeChamberCode]: (old[activeChamberCode] || []).map((s) =>
-            s.seatNumber === myCurrentSeat && s.occupiedBy
-              ? { ...s, occupiedBy: { ...s.occupiedBy, isVideoOn: next } }
-              : s
-          ),
-        }));
-      }
-      return next;
-    });
+    if (isMyVideoOn) {
+      stopUserCamera();
+    } else {
+      startUserCamera();
+    }
+  };
+
+  // Dedicated Per-Chamber Member Registration function
+  const registerInChamber = (
+    chamberCode: number,
+    details: { registeredRole: string; chamberSpecificData: Record<string, string> }
+  ): ChamberMemberRegistration => {
+    const badgeId = `CH${chamberCode}-${details.registeredRole.substring(0, 4).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newRegistration: ChamberMemberRegistration = {
+      badgeId,
+      chamberCode,
+      userId: currentUser.id,
+      fullName: currentUser.fullName,
+      nationality: currentUser.nationality,
+      photoUrl: currentUser.photoUrl,
+      registeredRole: details.registeredRole,
+      chamberSpecificData: details.chamberSpecificData,
+      registrationDate: new Date().toISOString().split('T')[0],
+      isVerified: true,
+    };
+
+    // Save registration for user
+    const updatedUserRegs = { ...chamberRegistrations, [chamberCode]: newRegistration };
+    setChamberRegistrations(updatedUserRegs);
+    localStorage.setItem('zw_chamber_registrations', JSON.stringify(updatedUserRegs));
+
+    // Append to chamber members list
+    const updatedMembersList = {
+      ...chamberMembersRegistry,
+      [chamberCode]: [newRegistration, ...(chamberMembersRegistry[chamberCode] || [])],
+    };
+    setChamberMembersRegistry(updatedMembersList);
+    localStorage.setItem('zw_chamber_members_list', JSON.stringify(updatedMembersList));
+
+    // Reward for active civic enrollment
+    rewardUserAction('speak');
+
+    return newRegistration;
   };
 
   // Automated translation & messaging
@@ -412,7 +703,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Run security peace scan
     const moderation = await checkSecurityAndPeace(text, activeChamberCode);
     if (!moderation.safe) {
-      alert(`Safety Shield: Message contains sensitive or prohibited language (${moderation.flag}). Please keep discourse peaceful.`);
+      alert(`Safety Shield: Message contains sensitive language (${moderation.flag}). Please keep discourse peaceful.`);
       return;
     }
 
@@ -477,8 +768,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
     }
 
-    // Revenue distribution formula per user request:
-    // 10% for Banking reserve fees, 5% for Developer/Founder reserve, 85% net user earning
     const bankReserve = grossReward * 0.10;
     const founderReserve = grossReward * 0.05;
     const netUserEarning = grossReward * 0.85;
@@ -500,13 +789,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ],
     }));
 
-    // Increment founder stats silently
     setFounderVaultStats((prev) => ({
       ...prev,
       totalPlatformVolumeBirr: prev.totalPlatformVolumeBirr + grossReward,
       bankReserve10PctBirr: prev.bankReserve10PctBirr + bankReserve,
       creatorReserve5PctBirr: prev.creatorReserve5PctBirr + founderReserve,
-      creatorDirectPayoutsBirr: prev.creatorDirectPayoutsBirr + (grossReward * 0.02), // builder bonus
+      creatorDirectPayoutsBirr: prev.creatorDirectPayoutsBirr + (grossReward * 0.02),
     }));
   };
 
@@ -564,7 +852,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const unlockFounderVault = (pass: string): boolean => {
-    // Secret founder access code
     if (pass === 'zebene2026' || pass === 'zebene' || pass === 'admin123') {
       setFounderVaultUnlocked(true);
       return true;
@@ -619,6 +906,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         makeDonation,
         isRegistrationOpen,
         setIsRegistrationOpen,
+        chamberRegistrations,
+        chamberMembersRegistry,
+        registerInChamber,
+        activeCameraStream,
+        cameraStatus,
+        cameraFacingMode,
+        toggleCameraFacingMode,
+        startUserCamera,
+        stopUserCamera,
       }}
     >
       {children}

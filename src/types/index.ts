@@ -115,3 +115,17 @@ export interface MarriageCovenant {
     witness: string | null;
   };
 }
+
+export interface ChamberMemberRegistration {
+  badgeId: string;
+  chamberCode: number;
+  userId: string;
+  fullName: string;
+  nationality: string;
+  photoUrl: string;
+  registeredRole: string;
+  chamberSpecificData: Record<string, string>;
+  registrationDate: string;
+  isVerified: boolean;
+}
+

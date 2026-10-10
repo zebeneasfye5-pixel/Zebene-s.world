@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Mic,
@@ -13,16 +13,22 @@ import {
   Share2,
   ThumbsUp,
   Hand,
-  Maximize2,
+  FileBadge,
+  Sparkles,
   TreeDeciduous,
   Lock,
   Heart,
   BookOpen,
-  Sparkles,
   Award,
+  RefreshCw,
+  Camera,
+  Users,
+  Eye,
+  Maximize2,
 } from 'lucide-react';
 import { speakText, initSpeechRecognition } from '../services/speech';
 import { WeddingContractModal } from './WeddingContractModal';
+import { ChamberRegistrationModal } from './ChamberRegistrationModal';
 
 export const ChamberView: React.FC = () => {
   const {
@@ -43,6 +49,14 @@ export const ChamberView: React.FC = () => {
     autoTranslateEnabled,
     setAutoTranslateEnabled,
     currentUser,
+    chamberRegistrations,
+    chamberMembersRegistry,
+    activeCameraStream,
+    cameraStatus,
+    cameraFacingMode,
+    toggleCameraFacingMode,
+    startUserCamera,
+    stopUserCamera,
   } = useApp();
 
   const [inputText, setInputText] = useState('');
@@ -50,12 +64,27 @@ export const ChamberView: React.FC = () => {
   const [isListeningMic, setIsListeningMic] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [weddingModalOpen, setWeddingModalOpen] = useState(false);
+  const [chamberRegModalOpen, setChamberRegModalOpen] = useState(false);
   const [expandedSeatCount, setExpandedSeatCount] = useState(36);
+  const [videoMode, setVideoMode] = useState<'split' | 'podium' | 'self'>('split');
 
-  // Local camera stream
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  // Callback ref for binding camera stream reliably to video element
+  const videoNodeRef = useRef<HTMLVideoElement | null>(null);
+  const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    videoNodeRef.current = node;
+    if (node && activeCameraStream) {
+      node.srcObject = activeCameraStream;
+      node.play().catch((err) => console.log('Video play catch:', err));
+    }
+  }, [activeCameraStream]);
+
+  // Secondary preview ref
+  const pipVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    if (node && activeCameraStream) {
+      node.srcObject = activeCameraStream;
+      node.play().catch(() => {});
+    }
+  }, [activeCameraStream]);
 
   // Auto scroll chat
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
@@ -64,39 +93,6 @@ export const ChamberView: React.FC = () => {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  // Request actual camera stream if user turns on video
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-
-    if (isMyVideoOn) {
-      navigator.mediaDevices
-        ?.getUserMedia({ video: true, audio: false })
-        .then((s) => {
-          stream = s;
-          setMediaStream(s);
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = s;
-          }
-          setCameraError(null);
-        })
-        .catch((err) => {
-          console.warn('Real webcam unavailable or denied, using simulated HD video stream:', err);
-          setCameraError('Webcam access optional - using high-fidelity avatar broadcast');
-        });
-    } else {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach((track) => track.stop());
-        setMediaStream(null);
-      }
-    }
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [isMyVideoOn]);
 
   // Speech Recognition hook
   const handleMicVoiceInput = () => {
@@ -135,7 +131,6 @@ export const ChamberView: React.FC = () => {
     setIsSending(false);
   };
 
-  // Upvote/Like engagement
   const handleLikeSession = () => {
     rewardUserAction('like');
   };
@@ -148,21 +143,29 @@ export const ChamberView: React.FC = () => {
     }
   };
 
-  // Find currently speaking seat
+  // Check if current user is registered in this chamber
+  const userRegistration = chamberRegistrations[activeChamberCode];
+  const chamberMembers = chamberMembersRegistry[activeChamberCode] || [];
+
+  // Active speaker on auditorium
   const activeSpeakerSeat = seats.find((s) => s.occupiedBy?.isSpeaking) || seats.find((s) => s.occupiedBy !== null);
 
   return (
     <div className="space-y-6">
-      {/* Wedding Modal for Chamber 5 */}
+      {/* Modals */}
       <WeddingContractModal isOpen={weddingModalOpen} onClose={() => setWeddingModalOpen(false)} />
+      <ChamberRegistrationModal
+        isOpen={chamberRegModalOpen}
+        onClose={() => setChamberRegModalOpen(false)}
+      />
 
-      {/* Chamber Header & Security Isolation Assurance */}
+      {/* Chamber Header & Strict Isolation Shield */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
         <div className={`absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl ${activeChamber.color} opacity-10 blur-3xl pointer-events-none`} />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center space-x-2.5">
+            <div className="flex items-center space-x-2.5 flex-wrap gap-y-1">
               <span className="px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-xs">
                 Chamber #{activeChamber.code}
               </span>
@@ -171,7 +174,7 @@ export const ChamberView: React.FC = () => {
               </span>
               <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Strict Chamber Isolation Shield (No data leak to other chambers)</span>
+                <span>Strict Chamber Isolation Active</span>
               </span>
             </div>
 
@@ -184,111 +187,299 @@ export const ChamberView: React.FC = () => {
             </p>
           </div>
 
-          {/* Social Engagement & Share buttons with direct earnings */}
+          {/* Social Engagement & Registration Actions */}
           <div className="flex items-center space-x-2 shrink-0">
             <button
+              onClick={() => setChamberRegModalOpen(true)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 shadow-sm ${
+                userRegistration
+                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/40 hover:bg-amber-500/20'
+                  : 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-md animate-pulse'
+              }`}
+            >
+              <FileBadge className="w-3.5 h-3.5" />
+              <span>
+                {userRegistration
+                  ? `Badge: ${userRegistration.badgeId}`
+                  : 'የቤቱ መመዝገቢያ (Chamber Registry)'}
+              </span>
+            </button>
+
+            <button
               onClick={handleLikeSession}
-              title="Like & Support this Chamber Assembly (Earns ETB reward)"
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+              title="Like & Support this Chamber Assembly"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
             >
               <ThumbsUp className="w-3.5 h-3.5" />
               <span>Like & Earn</span>
             </button>
+
             <button
               onClick={handleShareSession}
-              title="Share Chamber Link (Earns ETB reward)"
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-indigo-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
+              title="Share Chamber Link"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-sm"
             >
               <Share2 className="w-3.5 h-3.5" />
               <span>Share & Invite</span>
             </button>
+
             {activeChamberCode === 5 && (
               <button
                 onClick={() => setWeddingModalOpen(true)}
                 className="px-3.5 py-2 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-400 hover:to-rose-500 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-500/20 flex items-center space-x-1.5"
               >
                 <Heart className="w-3.5 h-3.5 fill-white" />
-                <span>Open Digital Wedding Registry</span>
+                <span>Wedding Registry</span>
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Main Chamber Stage & Multilingual Assembly Floor */}
+      {/* Per-Chamber Initial Registration Notice Bar (if not yet registered in this house) */}
+      {!userRegistration && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-indigo-500/15 border border-amber-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30">
+              <FileBadge className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-bold text-amber-200">
+                ማስታወሻ፡ በChamber #{activeChamberCode} ({activeChamber.amharicName}) እስካሁን አልተመዘገቡም!
+              </p>
+              <p className="text-[11px] text-slate-300">
+                እያንዳንዱ ቤት ራሱን የቻለ የመጀመሪያ የአባላት መመዝገቢያ አለው። አሁኑኑ ተመዝግበው ህጋዊ የቤቱን ባጅ ያግኙ።
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setChamberRegModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition-transform active:scale-95 shrink-0"
+          >
+            አሁኑኑ ይመዝገቡ (Register in this House) →
+          </button>
+        </div>
+      )}
+
+      {/* Main Assembly Floor & HD Video Screen */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (8 cols): Video Stage & Numbered Seats */}
+        {/* Left Column (8 cols): HD Face-to-Face Video Stage & Numbered Seats */}
         <div className="lg:col-span-8 space-y-6">
           {/* Main Visual Podium / Active Video Screen */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative">
-            <div className="aspect-video w-full bg-slate-950 relative flex items-center justify-center overflow-hidden">
-              {/* If user is seated with video on, show local camera or visualizer */}
-              {myCurrentSeat !== null && isMyVideoOn && mediaStream ? (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover transform -scale-x-100"
-                />
-              ) : activeSpeakerSeat?.occupiedBy ? (
-                /* Podium broadcast view */
-                <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950">
-                  <img
-                    src={activeSpeakerSeat.occupiedBy.userAvatar}
-                    alt={activeSpeakerSeat.occupiedBy.userName}
-                    className="w-36 h-36 rounded-2xl object-cover shadow-2xl border-2 border-amber-400/80 ring-4 ring-amber-500/20"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-slate-950/40 pointer-events-none" />
-
-                  {/* Audio waveform visualization bars */}
-                  <div className="absolute bottom-16 flex items-center gap-1">
-                    {[12, 24, 18, 36, 28, 44, 20, 32, 16, 26].map((h, idx) => (
-                      <span
-                        key={idx}
-                        className="w-1.5 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
-                        style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Speaker Badge */}
-                  <div className="absolute bottom-4 left-4 flex items-center space-x-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                    <span className="text-xs font-bold text-slate-100">
-                      Podium Speaker: {activeSpeakerSeat.occupiedBy.userName} (Seat #{activeSpeakerSeat.seatNumber})
-                    </span>
-                    <span className="text-xs">{activeSpeakerSeat.occupiedBy.userNationality}</span>
-                  </div>
-                </div>
-              ) : (
-                /* Empty auditorium podium */
-                <div className="text-center p-8 space-y-3">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-900 flex items-center justify-center border border-slate-800 text-amber-400">
-                    <Radio className="w-8 h-8 animate-pulse" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-200">The Assembly Floor is Open</h3>
-                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                    Take an available numbered chair below, activate your camera and microphone to speak to the world.
-                  </p>
-                </div>
-              )}
-
-              {/* Status Badges on video screen */}
-              <div className="absolute top-4 left-4 flex items-center space-x-2">
-                <span className="px-2.5 py-1 rounded-lg bg-rose-500/90 text-white text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
-                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  <span>Live Congress</span>
+            {/* View Mode Toolbar on Video Box */}
+            <div className="bg-slate-950 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="font-bold text-slate-200 text-xs">
+                  Face-to-Face HD Video Stage (የፊት ለፊት ጥራት ያለው ቪዲዮ)
                 </span>
-                <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 backdrop-blur text-slate-200 text-[11px] font-semibold border border-slate-700">
-                  Chamber #{activeChamberCode}
+                <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-[10px] font-mono">
+                  1080p HD Active
                 </span>
               </div>
 
-              {/* Translation Indicator Overlay */}
-              <div className="absolute top-4 right-4 bg-slate-900/90 backdrop-blur px-3 py-1 rounded-xl border border-slate-700 text-[11px] text-amber-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>AI Universal Translator Synchronized</span>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() => setVideoMode('split')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                    videoMode === 'split' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Dual Split View
+                </button>
+                <button
+                  onClick={() => setVideoMode('self')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                    videoMode === 'self' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  My HD Camera
+                </button>
+                <button
+                  onClick={() => setVideoMode('podium')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                    videoMode === 'podium' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Podium Focus
+                </button>
+              </div>
+            </div>
+
+            {/* Video Stage Container */}
+            <div className="aspect-video w-full bg-slate-950 relative flex items-center justify-center overflow-hidden">
+              {/* Split View: Podium Speaker + My Front Camera side by side */}
+              {videoMode === 'split' && (
+                <div className="w-full h-full grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-800">
+                  {/* Left Half: Podium Broadcaster */}
+                  <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden">
+                    {activeSpeakerSeat?.occupiedBy ? (
+                      <>
+                        <img
+                          src={activeSpeakerSeat.occupiedBy.userAvatar}
+                          alt={activeSpeakerSeat.occupiedBy.userName}
+                          className="w-28 h-28 rounded-2xl object-cover shadow-2xl border-2 border-amber-400/80 ring-4 ring-amber-500/20"
+                        />
+                        <div className="absolute bottom-10 flex items-center gap-1">
+                          {[12, 24, 18, 36, 28, 44, 20].map((h, idx) => (
+                            <span
+                              key={idx}
+                              className="w-1 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
+                              style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
+                            />
+                          ))}
+                        </div>
+                        <div className="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-[11px] font-bold text-slate-100">
+                          Podium: {activeSpeakerSeat.occupiedBy.userName} (Seat #{activeSpeakerSeat.seatNumber})
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center p-4 text-slate-400 text-xs">
+                        <Radio className="w-8 h-8 text-amber-400 mx-auto mb-2 animate-pulse" />
+                        <p>Podium Open for Speaking</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Half: User Front-Facing Video */}
+                  <div className="relative w-full h-full flex items-center justify-center bg-slate-950 overflow-hidden">
+                    {isMyVideoOn && activeCameraStream ? (
+                      <>
+                        <video
+                          ref={setVideoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover transform -scale-x-100"
+                        />
+                        <div className="absolute top-2 right-2 bg-emerald-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                          <span>Your HD Camera Live</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center p-4 space-y-2">
+                        <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-amber-400">
+                          <Camera className="w-6 h-6" />
+                        </div>
+                        <p className="text-xs text-slate-300 font-semibold">Your Front Camera is Idle</p>
+                        <p className="text-[11px] text-slate-400">
+                          Click below to start crystal-clear front-facing HD video!
+                        </p>
+                        <button
+                          onClick={toggleVideo}
+                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                        >
+                          ካሜራ ክፈት (Start Camera)
+                        </button>
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-[11px] font-bold text-amber-300">
+                      You: {currentUser.fullName}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Full Self View */}
+              {videoMode === 'self' && (
+                <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
+                  {isMyVideoOn && activeCameraStream ? (
+                    <video
+                      ref={setVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover transform -scale-x-100"
+                    />
+                  ) : (
+                    <div className="text-center p-6 space-y-3">
+                      <Camera className="w-12 h-12 text-amber-400 mx-auto" />
+                      <h4 className="text-sm font-bold text-slate-100">Activate High-Definition Front Video</h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Allow camera permissions to transmit crystal-clear 1080p face video to the chamber auditorium.
+                      </p>
+                      <button
+                        onClick={toggleVideo}
+                        className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold rounded-xl shadow-lg"
+                      >
+                        ካሜራ ክፈት (Start Front Camera)
+                      </button>
+                    </div>
+                  )}
+                  {/* PiP of Podium speaker if present */}
+                  {activeSpeakerSeat?.occupiedBy && (
+                    <div className="absolute bottom-4 right-4 w-32 h-24 bg-slate-900 border-2 border-amber-400 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center">
+                      <img
+                        src={activeSpeakerSeat.occupiedBy.userAvatar}
+                        alt="Speaker"
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] text-white">
+                        {activeSpeakerSeat.occupiedBy.userName.split(' ')[0]}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Full Podium View */}
+              {videoMode === 'podium' && (
+                <div className="w-full h-full relative flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950">
+                  {activeSpeakerSeat?.occupiedBy ? (
+                    <>
+                      <img
+                        src={activeSpeakerSeat.occupiedBy.userAvatar}
+                        alt={activeSpeakerSeat.occupiedBy.userName}
+                        className="w-36 h-36 rounded-2xl object-cover shadow-2xl border-2 border-amber-400/80 ring-4 ring-amber-500/20"
+                      />
+                      <div className="absolute bottom-16 flex items-center gap-1">
+                        {[12, 24, 18, 36, 28, 44, 20, 32, 16, 26].map((h, idx) => (
+                          <span
+                            key={idx}
+                            className="w-1.5 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
+                            style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
+                          />
+                        ))}
+                      </div>
+                      <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-bold text-slate-100">
+                        Speaker: {activeSpeakerSeat.occupiedBy.userName} ({activeSpeakerSeat.occupiedBy.userNationality})
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-8 space-y-2">
+                      <Radio className="w-10 h-10 text-amber-400 mx-auto animate-pulse" />
+                      <p className="text-sm font-bold text-slate-200">The Assembly Floor is Open</p>
+                      <p className="text-xs text-slate-400">Claim a seat below to speak on the podium!</p>
+                    </div>
+                  )}
+
+                  {/* PiP of User Camera */}
+                  {isMyVideoOn && activeCameraStream && (
+                    <div className="absolute bottom-4 right-4 w-36 h-28 bg-slate-950 border-2 border-emerald-400 rounded-xl overflow-hidden shadow-2xl">
+                      <video
+                        ref={pipVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover transform -scale-x-100"
+                      />
+                      <span className="absolute bottom-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] text-emerald-400 font-bold">
+                        Your Cam HD
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Status Badges Overlay */}
+              <div className="absolute top-3 left-3 flex items-center space-x-2 pointer-events-none">
+                <span className="px-2.5 py-1 rounded-lg bg-rose-500/90 text-white text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span>Live Chamber Video</span>
+                </span>
               </div>
             </div>
 
@@ -318,8 +509,19 @@ export const ChamberView: React.FC = () => {
                   }`}
                 >
                   {isMyVideoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4 text-slate-400" />}
-                  <span>{isMyVideoOn ? 'Camera HD (ካሜራ በርቷል)' : 'Camera Off (ካሜራ አጥፋ)'}</span>
+                  <span>{isMyVideoOn ? 'Camera HD (ካሜራ በርቷል)' : 'ካሜራ ክፈት (Start Camera)'}</span>
                 </button>
+
+                {/* Mobile Camera Flip */}
+                {isMyVideoOn && (
+                  <button
+                    onClick={toggleCameraFacingMode}
+                    title="Flip between front and rear cameras"
+                    className="p-2 rounded-xl text-xs font-medium border bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                )}
 
                 {/* Hand Raise */}
                 <button
@@ -335,7 +537,7 @@ export const ChamberView: React.FC = () => {
                 </button>
               </div>
 
-              {/* Seat Claim / Leave Status */}
+              {/* Seat Status & Registration Quick Action */}
               <div className="flex items-center space-x-3">
                 {myCurrentSeat !== null ? (
                   <div className="flex items-center space-x-2">
@@ -351,7 +553,7 @@ export const ChamberView: React.FC = () => {
                   </div>
                 ) : (
                   <span className="text-xs text-slate-400 italic">
-                    Click any numbered chair below to claim your seat!
+                    Click any numbered chair below to occupy your seat!
                   </span>
                 )}
               </div>
@@ -369,7 +571,7 @@ export const ChamberView: React.FC = () => {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Each chair is equipped with HD front-facing video and high-fidelity microphone.
+                  Each chair connects directly to HD front-facing video camera and microphone.
                 </p>
               </div>
 
@@ -411,12 +613,9 @@ export const ChamberView: React.FC = () => {
                         : 'bg-slate-950/60 border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900/90'
                     }`}
                   >
-                    {/* Seat number tag */}
                     <div className="w-full flex items-center justify-between text-[10px] text-slate-400 mb-1">
                       <span className="font-mono font-bold text-amber-300/80">#{seatNum}</span>
-                      {occupant && (
-                        <span>{occupant.isMuted ? '🔇' : '🎙️'}</span>
-                      )}
+                      {occupant && <span>{occupant.isMuted ? '🔇' : '🎙️'}</span>}
                     </div>
 
                     {occupant ? (
@@ -612,12 +811,8 @@ export const ChamberView: React.FC = () => {
                       <span className="text-[10px] text-slate-500">{msg.timestamp}</span>
                     </div>
 
-                    {/* Original Text */}
-                    <div className="text-slate-300 text-xs">
-                      {msg.originalText}
-                    </div>
+                    <div className="text-slate-300 text-xs">{msg.originalText}</div>
 
-                    {/* Translated Text if different */}
                     {msg.translatedText && msg.translatedText !== msg.originalText && (
                       <div className="mt-1 pt-1 border-t border-slate-800/80 text-[11px] text-amber-300/95 font-medium flex items-start justify-between gap-2 bg-amber-500/5 p-1.5 rounded-lg">
                         <div className="flex-1">
@@ -644,7 +839,6 @@ export const ChamberView: React.FC = () => {
           {/* Chat Input & Voice Recognition */}
           <form onSubmit={handleSend} className="p-3 bg-slate-950 border-t border-slate-800 space-y-2">
             <div className="flex items-center space-x-2">
-              {/* Mic Speech-to-Text Button */}
               <button
                 type="button"
                 onClick={handleMicVoiceInput}

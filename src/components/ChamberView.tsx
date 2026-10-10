@@ -67,6 +67,11 @@ export const ChamberView: React.FC = () => {
   const [chamberRegModalOpen, setChamberRegModalOpen] = useState(false);
   const [expandedSeatCount, setExpandedSeatCount] = useState(36);
   const [videoMode, setVideoMode] = useState<'split' | 'podium' | 'self'>('split');
+  // Full-body height & framing controls as requested
+  const [videoFraming, setVideoFraming] = useState<'contain' | 'cover'>('contain');
+  const [stageHeight, setStageHeight] = useState<'tall' | 'cinema' | 'standard'>('tall');
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [isFullWidthStage, setIsFullWidthStage] = useState<boolean>(true);
 
   // Callback ref for binding camera stream reliably to video element
   const videoNodeRef = useRef<HTMLVideoElement | null>(null);
@@ -262,162 +267,298 @@ export const ChamberView: React.FC = () => {
         </div>
       )}
 
-      {/* Main Assembly Floor & HD Video Screen */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (8 cols): HD Face-to-Face Video Stage & Numbered Seats */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Main Visual Podium / Active Video Screen */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative">
-            {/* View Mode Toolbar on Video Box */}
-            <div className="bg-slate-950 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="font-bold text-slate-200 text-xs">
-                  Face-to-Face HD Video Stage (የፊት ለፊት ጥራት ያለው ቪዲዮ)
-                </span>
-                <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-[10px] font-mono">
-                  1080p HD Active
-                </span>
+      {/* 1. Full-Width Panoramic HD Video Stage (100% Widescreen - ወደጎን ሙሉ ለሙሉ የሰፋ) */}
+      <div className="w-full">
+        {/* Main Visual Podium / Active Video Screen */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl relative">
+          {/* View Mode & Full-Body Zoom Toolbar on Video Box */}
+          <div className="bg-slate-950 px-3 sm:px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <span className="font-bold text-slate-200 text-xs">
+                Face-to-Face Full Body Stage (የፊት ለፊት ሙሉ አካል ቪዲዮ)
+              </span>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">
+                100% Widescreen • ወደጎን ሙሉ ስፋት
+              </span>
+            </div>
+
+            {/* View Layout & Height / Zoom Controls */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Full-Body / Uncropped Framing Toggle */}
+              <button
+                onClick={() => setVideoFraming(videoFraming === 'contain' ? 'cover' : 'contain')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors flex items-center space-x-1 ${
+                  videoFraming === 'contain'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+                }`}
+                title="Toggle Full Body (Uncropped) vs Fill Screen"
+              >
+                <span>🧍</span>
+                <span>{videoFraming === 'contain' ? 'ሙሉ አካል (Full Body: ON)' : 'ሙላት (Fill)'}</span>
+              </button>
+
+              {/* Stage Height Toggle (ረጅም ቁመት) */}
+              <button
+                onClick={() => {
+                  if (stageHeight === 'tall') setStageHeight('cinema');
+                  else if (stageHeight === 'cinema') setStageHeight('standard');
+                  else setStageHeight('tall');
+                }}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold transition-colors"
+                title="Cycle video stage height upward and downward"
+              >
+                ↕️ ቁመት: {stageHeight === 'cinema' ? 'እጅግ ረጅም (780px)' : stageHeight === 'tall' ? 'ረጅም (640px)' : 'መደበኛ (480px)'}
+              </button>
+
+              {/* Zoom Out / In Controls */}
+              <div className="flex items-center space-x-0.5 bg-slate-900 border border-slate-700 rounded-lg px-1 py-0.5">
+                <span className="text-[10px] text-slate-400 font-semibold px-1">ዙም:</span>
+                <button
+                  onClick={() => setZoomLevel((prev) => Math.max(0.75, Number((prev - 0.1).toFixed(2))))}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold"
+                  title="Zoom Out (Show more body/room)"
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => setZoomLevel(1.0)}
+                  className="px-1.5 text-[10px] font-mono text-amber-300 hover:text-white"
+                  title="Reset to 1.0x Full Wide"
+                >
+                  {zoomLevel}x
+                </button>
+                <button
+                  onClick={() => setZoomLevel((prev) => Math.min(1.4, Number((prev + 0.1).toFixed(2))))}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold"
+                  title="Zoom In"
+                >
+                  +
+                </button>
               </div>
 
-              <div className="flex items-center space-x-1.5">
+              {/* Layout View Modes */}
+              <div className="flex items-center space-x-1 border-l border-slate-800 pl-1.5 ml-1">
                 <button
                   onClick={() => setVideoMode('split')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
                     videoMode === 'split' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Dual Split View
+                  Dual Split
                 </button>
                 <button
                   onClick={() => setVideoMode('self')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
                     videoMode === 'self' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  My HD Camera
+                  My Camera
                 </button>
                 <button
                   onClick={() => setVideoMode('podium')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
                     videoMode === 'podium' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Podium Focus
+                  Podium
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Video Stage Container */}
-            <div className="aspect-video w-full bg-slate-950 relative flex items-center justify-center overflow-hidden">
+            {/* Video Stage Container with Extended Vertical Height */}
+            <div
+              className={`w-full bg-slate-950 relative flex items-center justify-center overflow-hidden transition-all duration-300 ${
+                stageHeight === 'cinema'
+                  ? 'h-[680px] sm:h-[780px]'
+                  : stageHeight === 'tall'
+                  ? 'h-[540px] sm:h-[640px]'
+                  : 'h-[440px] sm:h-[480px]'
+              }`}
+            >
               {/* Split View: Podium Speaker + My Front Camera side by side */}
               {videoMode === 'split' && (
                 <div className="w-full h-full grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-800">
                   {/* Left Half: Podium Broadcaster */}
-                  <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden">
+                  <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden p-4">
                     {activeSpeakerSeat?.occupiedBy ? (
                       <>
-                        <img
-                          src={activeSpeakerSeat.occupiedBy.userAvatar}
-                          alt={activeSpeakerSeat.occupiedBy.userName}
-                          className="w-28 h-28 rounded-2xl object-cover shadow-2xl border-2 border-amber-400/80 ring-4 ring-amber-500/20"
-                        />
-                        <div className="absolute bottom-10 flex items-center gap-1">
-                          {[12, 24, 18, 36, 28, 44, 20].map((h, idx) => (
-                            <span
-                              key={idx}
-                              className="w-1 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
-                              style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
-                            />
-                          ))}
+                        <div className="relative my-auto flex flex-col items-center justify-center">
+                          <img
+                            src={activeSpeakerSeat.occupiedBy.userAvatar}
+                            alt={activeSpeakerSeat.occupiedBy.userName}
+                            className="w-36 h-36 sm:w-44 sm:h-44 rounded-3xl object-cover shadow-2xl border-4 border-amber-400/80 ring-8 ring-amber-500/20"
+                          />
+                          <div className="mt-4 flex items-center gap-1.5">
+                            {[16, 32, 24, 48, 36, 56, 28, 40, 20].map((h, idx) => (
+                              <span
+                                key={idx}
+                                className="w-1.5 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
+                                style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-[11px] font-bold text-slate-100">
-                          Podium: {activeSpeakerSeat.occupiedBy.userName} (Seat #{activeSpeakerSeat.seatNumber})
+
+                        <div className="w-full mt-auto bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-700 flex items-center justify-between text-xs">
+                          <div>
+                            <span className="font-bold text-slate-100 block">
+                              Podium: {activeSpeakerSeat.occupiedBy.userName}
+                            </span>
+                            <span className="text-[11px] text-amber-300">
+                              Seat #{activeSpeakerSeat.seatNumber} • {activeSpeakerSeat.occupiedBy.userNationality}
+                            </span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">
+                            Live Speaker
+                          </span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center p-4 text-slate-400 text-xs">
-                        <Radio className="w-8 h-8 text-amber-400 mx-auto mb-2 animate-pulse" />
-                        <p>Podium Open for Speaking</p>
+                      <div className="text-center p-6 text-slate-400 text-xs my-auto">
+                        <Radio className="w-12 h-12 text-amber-400 mx-auto mb-3 animate-pulse" />
+                        <p className="font-bold text-sm text-slate-200">Podium Open for Speaking</p>
+                        <p className="text-xs text-slate-400 mt-1">Claim a numbered chair below to address the world.</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Right Half: User Front-Facing Video */}
-                  <div className="relative w-full h-full flex items-center justify-center bg-slate-950 overflow-hidden">
+                  {/* Right Half: User Front-Facing Video (Full body tall frame) */}
+                  <div className="relative w-full h-full flex flex-col items-center justify-center bg-slate-950 overflow-hidden">
                     {isMyVideoOn && activeCameraStream ? (
-                      <>
+                      <div className="w-full h-full relative flex items-center justify-center overflow-hidden bg-slate-950">
                         <video
                           ref={setVideoRef}
                           autoPlay
                           playsInline
                           muted
-                          className="w-full h-full object-cover transform -scale-x-100"
+                          className={`w-full h-full ${
+                            videoFraming === 'contain' ? 'object-contain' : 'object-cover'
+                          } transition-all duration-300`}
+                          style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
                         />
-                        <div className="absolute top-2 right-2 bg-emerald-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        {/* Live Badges */}
+                        <div className="absolute top-3 right-3 bg-emerald-500/95 text-white text-[11px] font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-lg">
                           <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                          <span>Your HD Camera Live</span>
+                          <span>HD Full Body Live ({zoomLevel}x)</span>
                         </div>
-                      </>
+                      </div>
                     ) : (
-                      <div className="text-center p-4 space-y-2">
-                        <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-amber-400">
-                          <Camera className="w-6 h-6" />
+                      <div className="text-center p-6 space-y-3 my-auto">
+                        <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-amber-400 shadow-xl">
+                          <Camera className="w-8 h-8" />
                         </div>
-                        <p className="text-xs text-slate-300 font-semibold">Your Front Camera is Idle</p>
-                        <p className="text-[11px] text-slate-400">
-                          Click below to start crystal-clear front-facing HD video!
-                        </p>
+                        <div>
+                          <p className="text-sm text-slate-200 font-bold">Front-Facing Camera is Idle</p>
+                          <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1">
+                            Click below to transmit tall, uncropped full-body video into the chamber!
+                          </p>
+                        </div>
                         <button
                           onClick={toggleVideo}
-                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                          className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all active:scale-95"
                         >
-                          ካሜራ ክፈት (Start Camera)
+                          ካሜራ ክፈት (Start Full Body Camera)
                         </button>
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700 text-[11px] font-bold text-amber-300">
-                      You: {currentUser.fullName}
+
+                    <div className="w-full p-3 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-amber-300 block">You: {currentUser.fullName}</span>
+                        <span className="text-[10px] text-slate-400">{currentUser.nationality}</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <button
+                          onClick={() => setVideoFraming(videoFraming === 'contain' ? 'cover' : 'contain')}
+                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]"
+                          title="Toggle full body vs zoom-fill"
+                        >
+                          {videoFraming === 'contain' ? 'Fit (ሙሉ አካል)' : 'Fill (ሙላት)'}
+                        </button>
+                        {isMyVideoOn && (
+                          <button
+                            onClick={toggleCameraFacingMode}
+                            className="p-1 rounded bg-slate-800 text-slate-300 hover:text-white"
+                            title="Flip camera"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Full Self View */}
+              {/* Full Self View (Extended Vertical View) */}
               {videoMode === 'self' && (
-                <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
+                <div className="w-full h-full relative flex items-center justify-center bg-slate-950 overflow-hidden">
                   {isMyVideoOn && activeCameraStream ? (
                     <video
                       ref={setVideoRef}
                       autoPlay
                       playsInline
                       muted
-                      className="w-full h-full object-cover transform -scale-x-100"
+                      className={`w-full h-full ${
+                        videoFraming === 'contain' ? 'object-contain' : 'object-cover'
+                      } transition-all duration-300`}
+                      style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
                     />
                   ) : (
-                    <div className="text-center p-6 space-y-3">
-                      <Camera className="w-12 h-12 text-amber-400 mx-auto" />
-                      <h4 className="text-sm font-bold text-slate-100">Activate High-Definition Front Video</h4>
+                    <div className="text-center p-8 space-y-4 my-auto">
+                      <Camera className="w-16 h-16 text-amber-400 mx-auto" />
+                      <h4 className="text-base font-bold text-slate-100">Activate High-Definition Front Video</h4>
                       <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                        Allow camera permissions to transmit crystal-clear 1080p face video to the chamber auditorium.
+                        Allow camera permissions to transmit crystal-clear 1080p full-body video into the chamber auditorium.
                       </p>
                       <button
                         onClick={toggleVideo}
-                        className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold rounded-xl shadow-lg"
+                        className="px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs font-bold rounded-xl shadow-lg"
                       >
-                        ካሜራ ክፈት (Start Front Camera)
+                        ካሜራ ክፈት (Start Full Body Camera)
                       </button>
                     </div>
                   )}
+
+                  {/* Floating Controls at Bottom of Video */}
+                  <div className="absolute bottom-4 left-4 right-4 bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-slate-700/80 flex items-center justify-between text-xs">
+                    <span className="font-bold text-amber-300">{currentUser.fullName} (Full Body View • {zoomLevel}x)</span>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setVideoFraming(videoFraming === 'contain' ? 'cover' : 'contain')}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 text-xs font-semibold"
+                      >
+                        {videoFraming === 'contain' ? '🧍 ሙሉ አካል (Uncropped)' : 'Crop Fill'}
+                      </button>
+                      <button
+                        onClick={() => setZoomLevel((prev) => Math.max(0.75, Number((prev - 0.1).toFixed(2))))}
+                        className="px-2 py-1 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold"
+                        title="Zoom out"
+                      >
+                        - ዙም
+                      </button>
+                      <button
+                        onClick={() => setZoomLevel((prev) => Math.min(1.4, Number((prev + 0.1).toFixed(2))))}
+                        className="px-2 py-1 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold"
+                        title="Zoom in"
+                      >
+                        + ዙም
+                      </button>
+                    </div>
+                  </div>
+
                   {/* PiP of Podium speaker if present */}
                   {activeSpeakerSeat?.occupiedBy && (
-                    <div className="absolute bottom-4 right-4 w-32 h-24 bg-slate-900 border-2 border-amber-400 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center">
+                    <div className="absolute top-4 right-4 w-36 h-28 bg-slate-900 border-2 border-amber-400 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
                       <img
                         src={activeSpeakerSeat.occupiedBy.userAvatar}
                         alt="Speaker"
                         className="w-full h-full object-cover"
                       />
-                      <span className="absolute bottom-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] text-white">
+                      <span className="absolute bottom-1 left-1 bg-black/80 px-2 py-0.5 rounded text-[10px] text-white font-bold">
                         {activeSpeakerSeat.occupiedBy.userName.split(' ')[0]}
                       </span>
                     </div>
@@ -427,46 +568,62 @@ export const ChamberView: React.FC = () => {
 
               {/* Full Podium View */}
               {videoMode === 'podium' && (
-                <div className="w-full h-full relative flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950">
+                <div className="w-full h-full relative flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 p-6 overflow-hidden">
                   {activeSpeakerSeat?.occupiedBy ? (
                     <>
-                      <img
-                        src={activeSpeakerSeat.occupiedBy.userAvatar}
-                        alt={activeSpeakerSeat.occupiedBy.userName}
-                        className="w-36 h-36 rounded-2xl object-cover shadow-2xl border-2 border-amber-400/80 ring-4 ring-amber-500/20"
-                      />
-                      <div className="absolute bottom-16 flex items-center gap-1">
-                        {[12, 24, 18, 36, 28, 44, 20, 32, 16, 26].map((h, idx) => (
-                          <span
-                            key={idx}
-                            className="w-1.5 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
-                            style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
-                          />
-                        ))}
+                      <div className="my-auto flex flex-col items-center justify-center">
+                        <img
+                          src={activeSpeakerSeat.occupiedBy.userAvatar}
+                          alt={activeSpeakerSeat.occupiedBy.userName}
+                          className="w-44 h-44 sm:w-56 sm:h-56 rounded-3xl object-cover shadow-2xl border-4 border-amber-400/80 ring-8 ring-amber-500/20"
+                        />
+                        <div className="mt-6 flex items-center gap-1.5">
+                          {[16, 32, 24, 48, 36, 56, 28, 44, 24, 36, 20].map((h, idx) => (
+                            <span
+                              key={idx}
+                              className="w-1.5 bg-gradient-to-t from-amber-500 to-rose-400 rounded-full animate-pulse"
+                              style={{ height: `${h}px`, animationDelay: `${idx * 0.1}s` }}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div className="absolute bottom-4 left-4 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-bold text-slate-100">
-                        Speaker: {activeSpeakerSeat.occupiedBy.userName} ({activeSpeakerSeat.occupiedBy.userNationality})
+
+                      <div className="w-full mt-auto bg-slate-900/90 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/80 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-sm font-black text-slate-100 block">
+                            Speaker: {activeSpeakerSeat.occupiedBy.userName}
+                          </span>
+                          <span className="text-xs text-amber-300 font-semibold">
+                            Chamber #{activeChamberCode} • {activeSpeakerSeat.occupiedBy.userNationality}
+                          </span>
+                        </div>
+                        <span className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold text-xs">
+                          Addressing Chamber
+                        </span>
                       </div>
                     </>
                   ) : (
-                    <div className="text-center p-8 space-y-2">
-                      <Radio className="w-10 h-10 text-amber-400 mx-auto animate-pulse" />
-                      <p className="text-sm font-bold text-slate-200">The Assembly Floor is Open</p>
-                      <p className="text-xs text-slate-400">Claim a seat below to speak on the podium!</p>
+                    <div className="text-center p-8 space-y-3 my-auto">
+                      <Radio className="w-14 h-14 text-amber-400 mx-auto animate-pulse" />
+                      <p className="text-base font-bold text-slate-200">The Assembly Floor is Open</p>
+                      <p className="text-xs text-slate-400">Claim a numbered chair below to speak on the podium!</p>
                     </div>
                   )}
 
                   {/* PiP of User Camera */}
                   {isMyVideoOn && activeCameraStream && (
-                    <div className="absolute bottom-4 right-4 w-36 h-28 bg-slate-950 border-2 border-emerald-400 rounded-xl overflow-hidden shadow-2xl">
+                    <div className="absolute top-4 right-4 w-40 h-32 bg-slate-950 border-2 border-emerald-400 rounded-2xl overflow-hidden shadow-2xl">
                       <video
                         ref={pipVideoRef}
                         autoPlay
                         playsInline
                         muted
-                        className="w-full h-full object-cover transform -scale-x-100"
+                        className={`w-full h-full ${
+                          videoFraming === 'contain' ? 'object-contain' : 'object-cover'
+                        }`}
+                        style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
                       />
-                      <span className="absolute bottom-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] text-emerald-400 font-bold">
+                      <span className="absolute bottom-1.5 left-1.5 bg-black/80 px-2 py-0.5 rounded text-[10px] text-emerald-400 font-bold">
                         Your Cam HD
                       </span>
                     </div>
@@ -475,7 +632,7 @@ export const ChamberView: React.FC = () => {
               )}
 
               {/* Status Badges Overlay */}
-              <div className="absolute top-3 left-3 flex items-center space-x-2 pointer-events-none">
+              <div className="absolute top-3 left-3 flex items-center space-x-2 pointer-events-none z-10">
                 <span className="px-2.5 py-1 rounded-lg bg-rose-500/90 text-white text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
                   <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                   <span>Live Chamber Video</span>
@@ -559,9 +716,14 @@ export const ChamberView: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Numbered Seats Auditorium Grid */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        {/* 2. Lower Assembly Floor: Numbered Chairs Auditorium (8 Cols) & Live Chat (4 Cols) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+          {/* Left Column (8 cols): Numbered Seats Auditorium & Specialized Panels */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Numbered Seats Auditorium Grid */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div>
                 <h3 className="font-extrabold text-sm text-slate-100 flex items-center gap-2">

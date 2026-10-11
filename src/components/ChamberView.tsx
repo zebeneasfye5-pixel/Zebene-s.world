@@ -25,6 +25,7 @@ import {
   Users,
   Eye,
   Maximize2,
+  Scale,
 } from 'lucide-react';
 import { speakText, initSpeechRecognition } from '../services/speech';
 import { WeddingContractModal } from './WeddingContractModal';
@@ -58,6 +59,9 @@ export const ChamberView: React.FC = () => {
     startUserCamera,
     stopUserCamera,
     effectiveOnline,
+    setIsLegalModalOpen,
+    setActiveTab,
+    legalCertificate,
   } = useApp();
 
   const [inputText, setInputText] = useState('');
@@ -164,6 +168,38 @@ export const ChamberView: React.FC = () => {
         isOpen={chamberRegModalOpen}
         onClose={() => setChamberRegModalOpen(false)}
       />
+
+      {/* International Legal Accountability Compliance Notice Bar */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-amber-500/30 rounded-xl px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between text-xs gap-2 shadow-md">
+        <div className="flex items-center space-x-2.5">
+          <Scale className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span className="text-slate-300">
+            <strong className="text-amber-300 font-bold">ዓለም አቀፍ የሕግ ተጠያቂነት ማስታወሻ፦</strong> በዚህ ክፍል የሚደረግ ማንኛውም ንግግር፣ ቪዲዮና ውይይት በ UN UDHR እና Budapest Cybercrime Convention ህግጋት የተገዛ ነው።
+          </span>
+        </div>
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <button
+            onClick={() => setActiveTab('tikil_2rya')}
+            className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/25 to-indigo-500/25 hover:from-amber-500/40 hover:to-indigo-500/40 text-amber-300 border border-amber-500/50 text-[11px] font-black transition-colors"
+          >
+            📁 ጥቅል መመሪያ (ዓላማና ወንጀል መመሪያ)
+          </button>
+          <button
+            onClick={() => setActiveTab('legal_compliance')}
+            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold transition-colors"
+          >
+            መመሪያውን አንብብ (Legal Guide)
+          </button>
+          {!legalCertificate?.isCertified && (
+            <button
+              onClick={() => setIsLegalModalOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[11px] font-bold animate-pulse transition-colors"
+            >
+              ውል ፈርም (Sign Compact)
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Chamber Header & Strict Isolation Shield */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">

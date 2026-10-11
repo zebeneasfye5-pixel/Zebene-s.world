@@ -17,10 +17,11 @@ import {
   Tv2,
   Vote,
   FileCheck2,
+  Scale,
 } from 'lucide-react';
 
 export const BankingAndEconomy: React.FC = () => {
-  const { userWallet, makeWithdrawal, rewardUserAction, effectiveOnline } = useApp();
+  const { userWallet, makeWithdrawal, rewardUserAction, effectiveOnline, setActiveTab } = useApp();
 
   // Bank payout states
   const [selectedBank, setSelectedBank] = useState('Commercial Bank of Ethiopia (CBE)');
@@ -134,6 +135,22 @@ export const BankingAndEconomy: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* AML & Financial Crime International Accountability Notice */}
+      <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between text-xs gap-3 shadow-md">
+        <div className="flex items-center space-x-2.5">
+          <Scale className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span className="text-slate-300">
+            <strong className="text-emerald-300 font-bold">የፋይናንስ ህግጋትና የጸረ-ማጭበርበር ደንብ (FATF AML/CFT)፦</strong> ሁሉም የገንዘብ ማውጣት፣ ማስገባትና ብድሮች በዓለም አቀፍ የፋይናንስ ህግ ቁጥጥር ስር ናቸው። ማንኛውም የማጭበርበር ሙከራ አካውንት እንዲታገድ ያደርጋል።
+          </span>
+        </div>
+        <button
+          onClick={() => setActiveTab('legal_compliance')}
+          className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold whitespace-nowrap transition-colors"
+        >
+          የህግ አንቀጽ 3ን ተመልከት (View Article 3)
+        </button>
       </div>
 
       {/* Revenue Sharing Architecture (Points 12 & 13) */}

@@ -20,15 +20,27 @@ import {
   Wifi,
   WifiOff,
   Play,
+  Scale,
+  FileCheck,
+  FolderOpen,
+  Key,
 } from 'lucide-react';
 
 interface NavbarProps {
   onOpenFounderVault: () => void;
   onOpenPWA: () => void;
   onOpenPlayStoreModal?: () => void;
+  onOpenLegalModal?: () => void;
+  onOpenTikil2ryaModal?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA, onOpenPlayStoreModal }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  onOpenFounderVault,
+  onOpenPWA,
+  onOpenPlayStoreModal,
+  onOpenLegalModal,
+  onOpenTikil2ryaModal,
+}) => {
   const {
     currentUser,
     activeChamberCode,
@@ -43,6 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA, o
     setIsRegistrationOpen,
     effectiveOnline,
     toggleSimulateOffline,
+    legalCertificate,
+    setIsTikil2ryaModalOpen,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -244,6 +258,48 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA, o
               </button>
             )}
 
+            {/* International Law & Compliance Guide Button */}
+            <button
+              onClick={() => {
+                if (onOpenLegalModal) {
+                  onOpenLegalModal();
+                } else {
+                  setActiveTab('legal_compliance');
+                }
+              }}
+              title="International Legal Accountability & User Guide (ዓለም አቀፍ የሕግ ተጠያቂነትና መመሪያ)"
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                legalCertificate?.isCertified
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                  : 'bg-rose-500/15 text-rose-300 border-rose-500/40 hover:bg-rose-500/25 animate-pulse'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">ዓለም አቀፍ ሕግ</span>
+              {legalCertificate?.isCertified ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-400" title="Certified Signatory" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-rose-400" title="Uncertified Signatory" />
+              )}
+            </button>
+
+            {/* Tikil Memeriya Main Folder Key Button */}
+            <button
+              onClick={() => {
+                if (onOpenTikil2ryaModal) {
+                  onOpenTikil2ryaModal();
+                } else {
+                  setIsTikil2ryaModalOpen(true);
+                }
+              }}
+              title="Folder Key: Tikil Memeriya - Grand Purpose & Criminal Accountability Directive (የፈልደር ቁልፍ: ጥቅል መመሪያ)"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-black bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 text-amber-300 hover:text-white border border-amber-500/50 shadow-sm transition-all"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <Key className="w-3 h-3 text-amber-300" />
+              <span>ጥቅል መመሪያ</span>
+            </button>
+
             {/* Private Founder Vault Button (Protected) */}
             <button
               onClick={onOpenFounderVault}
@@ -329,6 +385,41 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA, o
             <Landmark className="w-4 h-4 text-emerald-300" />
             <span>Banking, Loans & Talent (ኢኮኖሚና ባንክ)</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('legal_compliance')}
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+              activeTab === 'legal_compliance'
+                ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-md font-bold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60 border border-amber-500/20'
+            }`}
+          >
+            <Scale className="w-4 h-4 text-amber-300" />
+            <span>Legal & Global Treaties (ዓለም አቀፍ ሕግጋትና መመሪያ)</span>
+            {legalCertificate?.isCertified ? (
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                ✓ ህጉ ጸድቋል
+              </span>
+            ) : (
+              <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded text-[10px] font-bold animate-pulse">
+                ውል አልተፈረመም
+              </span>
+            )}
+          </button>
+
+          {/* Tikil Memeriya Main Folder Tab */}
+          <button
+            onClick={() => setActiveTab('tikil_2rya')}
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all border ${
+              activeTab === 'tikil_2rya'
+                ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 text-slate-950 font-black border-amber-400 shadow-md'
+                : 'text-amber-300 hover:text-white hover:bg-slate-800/60 border-amber-500/40'
+            }`}
+          >
+            <FolderOpen className="w-4 h-4 text-amber-400" />
+            <Key className="w-3.5 h-3.5 text-amber-300" />
+            <span>📁 ጥቅል መመሪያ (ዋና ዓላማና የወንጀል ተጠያቂነት)</span>
+          </button>
         </div>
       </div>
 
@@ -363,6 +454,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA, o
               className="text-xs text-amber-400 font-semibold"
             >
               Verify Face Biometric
+            </button>
+          </div>
+
+          <div className="pt-2 border-t border-slate-800 space-y-2">
+            <button
+              onClick={() => {
+                setActiveTab('tikil_2rya');
+                setMobileMenuOpen(false);
+              }}
+              className="w-full py-2 px-3 bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 border border-amber-500/50 rounded-xl text-xs font-black text-amber-300 flex items-center justify-center space-x-2"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+              <span>📁 ጥቅል መመሪያ (ዋና ዓላማ እና የወንጀል ተጠያቂነት)</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab('legal_compliance');
+                setMobileMenuOpen(false);
+              }}
+              className="w-full py-2 px-3 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-center space-x-2"
+            >
+              <Scale className="w-3.5 h-3.5 text-amber-400" />
+              <span>ዓለም አቀፍ የሕግ ተጠያቂነትና የአጠቃቀም መመሪያ</span>
             </button>
           </div>
 

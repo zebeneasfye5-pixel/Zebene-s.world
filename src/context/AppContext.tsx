@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { UserProfile, Seat, ChamberMessage, ChamberInfo, ChamberMemberRegistration } from '../types';
+import { UserProfile, Seat, ChamberMessage, ChamberInfo, ChamberMemberRegistration, LegalComplianceCertificate } from '../types';
 import { CHAMBERS } from '../data/chambers';
 import { translateText, checkSecurityAndPeace } from '../services/api';
 import { speakText } from '../services/speech';
@@ -20,8 +20,14 @@ interface AppContextType {
   chambers: ChamberInfo[];
   activeChamberCode: number;
   activeChamber: ChamberInfo;
-  activeTab: 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance';
-  setActiveTab: (tab: 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance') => void;
+  activeTab: 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya';
+  setActiveTab: (tab: 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya') => void;
+  legalCertificate: LegalComplianceCertificate | null;
+  acceptLegalCompact: () => LegalComplianceCertificate;
+  isLegalModalOpen: boolean;
+  setIsLegalModalOpen: (open: boolean) => void;
+  isTikil2ryaModalOpen: boolean;
+  setIsTikil2ryaModalOpen: (open: boolean) => void;
   seats: Seat[];
   myCurrentSeat: number | null;
   isMyMicOn: boolean;
@@ -296,11 +302,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeChamberCode, setActiveChamberCode] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance'>('chamber');
+  const [activeTab, setActiveTab] = useState<'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya'>('chamber');
   const [userLanguage, setUserLanguage] = useState<string>('en');
   const [autoTranslateEnabled, setAutoTranslateEnabled] = useState<boolean>(true);
   const [autoSpeechEnabled, setAutoSpeechEnabled] = useState<boolean>(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState<boolean>(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState<boolean>(false);
+  const [isTikil2ryaModalOpen, setIsTikil2ryaModalOpen] = useState<boolean>(false);
+
+  // International Legal Compliance Certificate (Persisted in localStorage)
+  const [legalCertificate, setLegalCertificate] = useState<LegalComplianceCertificate | null>(() => {
+    const saved = localStorage.getItem('zw_legal_certificate');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return null;
+  });
+
+  const acceptLegalCompact = useCallback((): LegalComplianceCertificate => {
+    const cert: LegalComplianceCertificate = {
+      certificateId: `TREATY-INTL-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      nationality: currentUser.nationality,
+      agreedAt: new Date().toISOString(),
+      jurisdiction: 'International Commercial & Civil Harmonized Jurisdiction (170+ Signatory Nations)',
+      digitalSignatureHash: `SHA256-${Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+      termsVersion: '2026.1-GLOBAL-SOVEREIGN',
+      isCertified: true,
+    };
+    setLegalCertificate(cert);
+    localStorage.setItem('zw_legal_certificate', JSON.stringify(cert));
+    return cert;
+  }, [currentUser]);
 
   // Real-time network detection & Offline mode simulation
   const [isOnline, setIsOnline] = useState<boolean>(() => {
@@ -1001,6 +1035,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleCameraFacingMode,
         startUserCamera,
         stopUserCamera,
+        legalCertificate,
+        acceptLegalCompact,
+        isLegalModalOpen,
+        setIsLegalModalOpen,
+        isTikil2ryaModalOpen,
+        setIsTikil2ryaModalOpen,
         isOnline,
         isSimulatedOffline,
         effectiveOnline,

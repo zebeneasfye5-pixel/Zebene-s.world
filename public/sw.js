@@ -73,15 +73,16 @@ self.addEventListener('fetch', (event) => {
 
   // 1. Intercept API calls when offline
   if (url.pathname.startsWith('/api/')) {
+    const requestForOffline = event.request.clone();
     event.respondWith(
-      fetch(event.request.clone())
+      fetch(event.request)
         .catch(async () => {
           console.log('[ServiceWorker] Network unavailable, returning offline API response for:', url.pathname);
 
           // Offline Translation Fallback
           if (url.pathname === '/api/translate') {
             try {
-              const body = await event.request.json();
+              const body = await requestForOffline.json();
               const text = body.text || '';
               const targetLang = body.targetLang || 'English';
               const words = text.toLowerCase().trim();

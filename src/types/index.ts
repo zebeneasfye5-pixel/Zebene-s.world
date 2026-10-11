@@ -130,3 +130,35 @@ export interface ChamberMemberRegistration {
   isVerified: boolean;
 }
 
+export interface LegalComplianceCertificate {
+  certificateId: string;
+  userId: string;
+  userName: string;
+  nationality: string;
+  agreedAt: string;
+  jurisdiction: string;
+  digitalSignatureHash: string;
+  termsVersion: string;
+  isCertified: boolean;
+}
+
+export interface LegalArticle {
+  id: string;
+  articleNumber: number;
+  title: string;
+  amharicTitle: string;
+  category: 'human_rights' | 'cybercrime' | 'financial_aml' | 'civil_contracts' | 'intellectual_property' | 'privacy_data' | 'jurisdiction';
+  internationalTreatyReference: string;
+  summary: string;
+  amharicSummary: string;
+  fullProvisions: string[];
+  amharicProvisions: string[];
+  legalConsequences: string;
+  amharicConsequences: string;
+  icon: string;
+}
+
+export type PlatformTab = 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya';
+
+
+

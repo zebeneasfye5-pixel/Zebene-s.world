@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { requestAITutorLesson, TutorResponse } from '../services/api';
+import { OFFLINE_LESSONS, OfflineLesson } from '../data/offlineData';
 import {
   BookOpen,
   Search,
@@ -11,6 +12,8 @@ import {
   Layers,
   ArrowRight,
   Lightbulb,
+  WifiOff,
+  Zap,
 } from 'lucide-react';
 
 export const LearningHorizon: React.FC = () => {
@@ -82,6 +85,22 @@ export const LearningHorizon: React.FC = () => {
   const handleSelectQuiz = (qIdx: number, optionIdx: number) => {
     if (quizSubmitted) return;
     setSelectedQuizAnswers((prev) => ({ ...prev, [qIdx]: optionIdx }));
+  };
+
+  const loadOfflineLesson = (offLesson: OfflineLesson) => {
+    setLesson({
+      title: `${offLesson.title} (${offLesson.amharicTitle})`,
+      summary: offLesson.summary,
+      historicalContext: offLesson.historicalContext,
+      keyConcepts: offLesson.keyConcepts,
+      stepByStepGuide: offLesson.stepByStepGuide,
+      realWorldImpact: offLesson.realWorldImpact,
+      quickQuiz: offLesson.quickQuiz,
+      isOffline: true,
+    });
+    setQuizSubmitted(false);
+    setSelectedQuizAnswers({});
+    rewardUserAction('game');
   };
 
   return (
@@ -158,14 +177,66 @@ export const LearningHorizon: React.FC = () => {
         </div>
       </div>
 
+      {/* Offline Knowledge Vault (የኦፍላይን እውቀት ማህደር) - 100% Pre-cached Modules */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              <Zap className="w-4 h-4" />
+            </span>
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-100 flex items-center gap-2">
+                <span>Offline Knowledge Vault</span>
+                <span className="text-amber-400 font-serif">(የኦፍላይን እውቀት ማህደር)</span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                ኢንተርኔት በሌለበት ጊዜና ቦታ በቀጥታ የሚከፈቱ የተዘጋጁ ሙያዊ ትምህርቶች (Pre-cached Sovereign Masterclasses)
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-semibold shrink-0">
+            ⚡ 100% Offline Ready
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {OFFLINE_LESSONS.map((ol) => (
+            <button
+              key={ol.id}
+              onClick={() => loadOfflineLesson(ol)}
+              className="text-left p-3.5 rounded-xl bg-slate-950/80 hover:bg-slate-800/90 border border-slate-800 hover:border-indigo-500/50 transition-all group space-y-1.5"
+            >
+              <div className="flex items-center justify-between text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+                <span>{ol.amharicCategory}</span>
+                <span className="text-slate-500 group-hover:text-amber-300 transition-colors">ክፈት →</span>
+              </div>
+              <h4 className="text-xs font-extrabold text-slate-200 group-hover:text-white transition-colors line-clamp-1">
+                {ol.title}
+              </h4>
+              <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                {ol.amharicTitle} — {ol.summary}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Main Lesson Content */}
       {lesson && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
           {/* Module Header */}
           <div className="border-b border-slate-800 pb-5">
-            <div className="flex items-center space-x-2 text-xs text-indigo-400 font-bold mb-1">
-              <BookOpen className="w-4 h-4" />
-              <span>Standard Sovereign Masterclass • Self-Paced Learning</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <div className="flex items-center space-x-2 text-xs text-indigo-400 font-bold">
+                <BookOpen className="w-4 h-4" />
+                <span>Standard Sovereign Masterclass • Self-Paced Learning</span>
+              </div>
+              {lesson.isOffline && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold flex items-center gap-1">
+                  <WifiOff className="w-3 h-3 text-amber-400" />
+                  <span>Offline Knowledge Loaded (ያለ ኢንተርኔት የተጫነ)</span>
+                </span>
+              )}
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-100">
               {lesson.title}

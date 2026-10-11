@@ -16,6 +16,8 @@ import {
   X,
   Volume2,
   VolumeX,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -36,6 +38,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA })
     autoSpeechEnabled,
     setAutoSpeechEnabled,
     setIsRegistrationOpen,
+    effectiveOnline,
+    toggleSimulateOffline,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -113,6 +117,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenFounderVault, onOpenPWA })
               }`}
             >
               {autoSpeechEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+
+            {/* Online / Offline Status Indicator & Simulation Toggle */}
+            <button
+              onClick={toggleSimulateOffline}
+              title={
+                effectiveOnline
+                  ? "Network Connected (ኦንላይን). Click to test Offline Mode (ኦፍላይን ሞክር)"
+                  : "Offline Mode Active (ያለ ኢንተርኔት ይሰራል). Click to restore Online Mode"
+              }
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                effectiveOnline
+                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20 animate-pulse'
+              }`}
+            >
+              {effectiveOnline ? (
+                <>
+                  <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Online (ኦንላይን)</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Offline (ኦፍላይን ይሰራል)</span>
+                </>
+              )}
             </button>
 
             {/* Language Selector */}

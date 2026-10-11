@@ -29,10 +29,13 @@ export const GamesAndLottery: React.FC = () => {
   const [showTriviaResult, setShowTriviaResult] = useState(false);
 
   // Lottery Ticket Purchase State
-  const [myTickets, setMyTickets] = useState<string[]>([
-    'ZW-LOTTO-7821',
-    'ZW-LOTTO-9014',
-  ]);
+  const [myTickets, setMyTickets] = useState<string[]>(() => {
+    const saved = localStorage.getItem('zw_my_lottery_tickets');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return ['ZW-LOTTO-7821', 'ZW-LOTTO-9014'];
+  });
   const [lotteryPurchasedNotice, setLotteryPurchasedNotice] = useState<string | null>(null);
 
   const triviaQuestions = [
@@ -128,7 +131,11 @@ export const GamesAndLottery: React.FC = () => {
 
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const newTicket = `ZW-LOTTO-${randomNum}`;
-    setMyTickets((prev) => [...prev, newTicket]);
+    setMyTickets((prev) => {
+      const updated = [...prev, newTicket];
+      localStorage.setItem('zw_my_lottery_tickets', JSON.stringify(updated));
+      return updated;
+    });
     setLotteryPurchasedNotice(`Ticket ${newTicket} purchased successfully for 25 ETB!`);
     rewardUserAction('like');
     setTimeout(() => setLotteryPurchasedNotice(null), 4000);

@@ -3,6 +3,7 @@ import { UserProfile, Seat, ChamberMessage, ChamberInfo, ChamberMemberRegistrati
 import { CHAMBERS } from '../data/chambers';
 import { translateText, checkSecurityAndPeace } from '../services/api';
 import { speakText } from '../services/speech';
+import { offlineTranslate } from '../data/offlineData';
 
 interface Transaction {
   id: string;
@@ -76,6 +77,12 @@ interface AppContextType {
   toggleCameraFacingMode: () => void;
   startUserCamera: () => Promise<MediaStream | null>;
   stopUserCamera: () => void;
+
+  // Offline State & Network Handling
+  isOnline: boolean;
+  isSimulatedOffline: boolean;
+  effectiveOnline: boolean;
+  toggleSimulateOffline: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -295,6 +302,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [autoSpeechEnabled, setAutoSpeechEnabled] = useState<boolean>(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState<boolean>(false);
 
+  // Real-time network detection & Offline mode simulation
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  });
+  const [isSimulatedOffline, setIsSimulatedOffline] = useState<boolean>(() => {
+    return localStorage.getItem('zw_simulated_offline') === 'true';
+  });
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const effectiveOnline = isOnline && !isSimulatedOffline;
+
+  const toggleSimulateOffline = () => {
+    setIsSimulatedOffline((prev) => {
+      const next = !prev;
+      localStorage.setItem('zw_simulated_offline', String(next));
+      return next;
+    });
+  };
+
   // Per-Chamber Member Registrations (Saved in local storage)
   const [chamberRegistrations, setChamberRegistrations] = useState<Record<number, ChamberMemberRegistration | null>>(() => {
     const saved = localStorage.getItem('zw_chamber_registrations');
@@ -357,139 +395,151 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     7: createInitialSeats(18),
   });
 
-  // ISOLATED chat messages per chamber (requirement: strict isolation)
-  const [messagesByChamber, setMessagesByChamber] = useState<Record<number, ChamberMessage[]>>({
-    1: [
-      {
-        id: 'msg-1-1',
-        chamberCode: 1,
-        userId: 'usr-zebene',
-        userName: 'Zebene Asfaw (Founder)',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'Ethiopia 🇪🇹',
-        originalText: 'እንኳን ወደ ዘበነ የመሰረተው አለም የሁሉም የጋራ ቤት በሰላም መጣችሁ! በጋራ እንማማር፣ እውቀት እንለዋወጥ፣ ሰላምን እናበርክት።',
-        originalLanguage: 'Amharic',
-        translatedText: 'Welcome to the House of All Nations in Zebene\'s World! Let us learn together, exchange knowledge, and cultivate peace.',
-        timestamp: '10:30 AM',
-        isOfficial: true,
-      },
-      {
-        id: 'msg-1-2',
-        chamberCode: 1,
-        userId: 'usr-marcus',
-        userName: 'Marcus Chen',
-        userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'Singapore 🇸🇬',
-        originalText: 'Greetings from Singapore! The real-time speech translation across all world languages is truly revolutionary for global unity.',
-        originalLanguage: 'English',
-        translatedText: 'Greetings from Singapore! The real-time speech translation across all world languages is truly revolutionary for global unity.',
-        timestamp: '10:32 AM',
-      },
-    ],
-    2: [
-      {
-        id: 'msg-2-1',
-        chamberCode: 2,
-        userId: 'usr-k2',
-        userName: 'Ato Solomon Tessema',
-        userAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'Ethiopia 🇪🇹',
-        originalText: 'የዘር ግንድ እና የቤተሰብ ታሪክ ማጠናከሪያ ዝርዝር መዝገብ እዚህ ተሰናድቷል።',
-        originalLanguage: 'Amharic',
-        translatedText: 'The ancestral lineage and family chronicle registry is actively compiled here.',
-        timestamp: '09:15 AM',
-      },
-    ],
-    3: [
-      {
-        id: 'msg-3-1',
-        chamberCode: 3,
-        userId: 'usr-st1',
-        userName: 'Ambassador Daniel Wright',
-        userAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'UK 🇬🇧',
-        originalText: 'Deliberating multilateral infrastructure financing and green industrial corridors.',
-        originalLanguage: 'English',
-        translatedText: 'Deliberating multilateral infrastructure financing and green industrial corridors.',
-        timestamp: '08:45 AM',
-        isOfficial: true,
-      },
-    ],
-    4: [
-      {
-        id: 'msg-4-1',
-        chamberCode: 4,
-        userId: 'usr-sec1',
-        userName: 'Encrypted Counselor',
-        userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'Global 🌐',
-        originalText: 'This sanctuary is sealed with end-to-end zero-knowledge secrecy for prospective couples.',
-        originalLanguage: 'English',
-        translatedText: 'This sanctuary is sealed with end-to-end zero-knowledge secrecy for prospective couples.',
-        timestamp: '11:00 AM',
-      },
-    ],
-    5: [
-      {
-        id: 'msg-5-1',
-        chamberCode: 5,
-        userId: 'usr-wed1',
-        userName: 'Elder Gabriel & Elder Fatuma',
-        userAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'Ethiopia 🇪🇹',
-        originalText: 'ሙሽራውና ሙሽሪት በሰላም ቀርበዋል። ምስክሮች እና ሽማግሌዎች ፊርማቸውን በኦንላይን ለመስጠት ዝግጁ ናቸው!',
-        originalLanguage: 'Amharic',
-        translatedText: 'The bride and groom have arrived in honor. Elders and witnesses are ready for digital covenant signatures!',
-        timestamp: '02:00 PM',
-      },
-    ],
-    6: [
-      {
-        id: 'msg-6-1',
-        chamberCode: 6,
-        userId: 'usr-f1',
-        userName: 'Interfaith Circle',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'Global 🌐',
-        originalText: 'May peace and benevolence envelop every human home on Earth.',
-        originalLanguage: 'English',
-        translatedText: 'May peace and benevolence envelop every human home on Earth.',
-        timestamp: '07:30 AM',
-      },
-    ],
-    7: [
-      {
-        id: 'msg-7-1',
-        chamberCode: 7,
-        userId: 'usr-sec-guard',
-        userName: 'Peacekeeper Central Command',
-        userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-        userNationality: 'International Peace Council 🕊️',
-        originalText: 'Civil radar active. All 7 chambers report 100% harmonious assembly.',
-        originalLanguage: 'English',
-        translatedText: 'Civil radar active. All 7 chambers report 100% harmonious assembly.',
-        timestamp: '11:15 AM',
-        isOfficial: true,
-      },
-    ],
+  // ISOLATED chat messages per chamber (Saved in local storage for full offline persistence)
+  const [messagesByChamber, setMessagesByChamber] = useState<Record<number, ChamberMessage[]>>(() => {
+    const saved = localStorage.getItem('zw_chamber_messages');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return {
+      1: [
+        {
+          id: 'msg-1-1',
+          chamberCode: 1,
+          userId: 'usr-zebene',
+          userName: 'Zebene Asfaw (Founder)',
+          userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'Ethiopia 🇪🇹',
+          originalText: 'እንኳን ወደ ዘበነ የመሰረተው አለም የሁሉም የጋራ ቤት በሰላም መጣችሁ! በጋራ እንማማር፣ እውቀት እንለዋወጥ፣ ሰላምን እናበርክት።',
+          originalLanguage: 'Amharic',
+          translatedText: 'Welcome to the House of All Nations in Zebene\'s World! Let us learn together, exchange knowledge, and cultivate peace.',
+          timestamp: '10:30 AM',
+          isOfficial: true,
+        },
+        {
+          id: 'msg-1-2',
+          chamberCode: 1,
+          userId: 'usr-marcus',
+          userName: 'Marcus Chen',
+          userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'Singapore 🇸🇬',
+          originalText: 'Greetings from Singapore! The real-time speech translation across all world languages is truly revolutionary for global unity.',
+          originalLanguage: 'English',
+          translatedText: 'Greetings from Singapore! The real-time speech translation across all world languages is truly revolutionary for global unity.',
+          timestamp: '10:32 AM',
+        },
+      ],
+      2: [
+        {
+          id: 'msg-2-1',
+          chamberCode: 2,
+          userId: 'usr-k2',
+          userName: 'Ato Solomon Tessema',
+          userAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'Ethiopia 🇪🇹',
+          originalText: 'የዘር ግንድ እና የቤተሰብ ታሪክ ማጠናከሪያ ዝርዝር መዝገብ እዚህ ተሰናድቷል።',
+          originalLanguage: 'Amharic',
+          translatedText: 'The ancestral lineage and family chronicle registry is actively compiled here.',
+          timestamp: '09:15 AM',
+        },
+      ],
+      3: [
+        {
+          id: 'msg-3-1',
+          chamberCode: 3,
+          userId: 'usr-st1',
+          userName: 'Ambassador Daniel Wright',
+          userAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'UK 🇬🇧',
+          originalText: 'Deliberating multilateral infrastructure financing and green industrial corridors.',
+          originalLanguage: 'English',
+          translatedText: 'Deliberating multilateral infrastructure financing and green industrial corridors.',
+          timestamp: '08:45 AM',
+          isOfficial: true,
+        },
+      ],
+      4: [
+        {
+          id: 'msg-4-1',
+          chamberCode: 4,
+          userId: 'usr-sec1',
+          userName: 'Encrypted Counselor',
+          userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'Global 🌐',
+          originalText: 'This sanctuary is sealed with end-to-end zero-knowledge secrecy for prospective couples.',
+          originalLanguage: 'English',
+          translatedText: 'This sanctuary is sealed with end-to-end zero-knowledge secrecy for prospective couples.',
+          timestamp: '11:00 AM',
+        },
+      ],
+      5: [
+        {
+          id: 'msg-5-1',
+          chamberCode: 5,
+          userId: 'usr-wed1',
+          userName: 'Elder Gabriel & Elder Fatuma',
+          userAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'Ethiopia 🇪🇹',
+          originalText: 'ሙሽራውና ሙሽሪት በሰላም ቀርበዋል። ምስክሮች እና ሽማግሌዎች ፊርማቸውን በኦንላይን ለመስጠት ዝግጁ ናቸው!',
+          originalLanguage: 'Amharic',
+          translatedText: 'The bride and groom have arrived in honor. Elders and witnesses are ready for digital covenant signatures!',
+          timestamp: '02:00 PM',
+        },
+      ],
+      6: [
+        {
+          id: 'msg-6-1',
+          chamberCode: 6,
+          userId: 'usr-f1',
+          userName: 'Interfaith Circle',
+          userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'Global 🌐',
+          originalText: 'May peace and benevolence envelop every human home on Earth.',
+          originalLanguage: 'English',
+          translatedText: 'May peace and benevolence envelop every human home on Earth.',
+          timestamp: '07:30 AM',
+        },
+      ],
+      7: [
+        {
+          id: 'msg-7-1',
+          chamberCode: 7,
+          userId: 'usr-sec-guard',
+          userName: 'Peacekeeper Central Command',
+          userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          userNationality: 'International Peace Council 🕊️',
+          originalText: 'Civil radar active. All 7 chambers report 100% harmonious assembly.',
+          originalLanguage: 'English',
+          translatedText: 'Civil radar active. All 7 chambers report 100% harmonious assembly.',
+          timestamp: '11:15 AM',
+          isOfficial: true,
+        },
+      ],
+    };
   });
 
-  // User wallet state
+  // User wallet state (Saved in local storage for full offline persistence)
   const [userWallet, setUserWallet] = useState<{
     balanceBirr: number;
     balanceUsd: number;
     lifetimeEarnedBirr: number;
     transactions: Transaction[];
-  }>({
-    balanceBirr: 3450.0,
-    balanceUsd: 62.7,
-    lifetimeEarnedBirr: 5800.0,
-    transactions: [
-      { id: 'tx-1', type: 'earning', description: 'Chamber 1 Dialogue Participation Reward', amountBirr: 150.0, date: '2026-10-08', status: 'completed' },
-      { id: 'tx-2', type: 'earning', description: 'Content Sharing & Global Community Engagement', amountBirr: 85.0, date: '2026-10-07', status: 'completed' },
-      { id: 'tx-3', type: 'withdrawal', description: 'Withdrawal to Commercial Bank of Ethiopia (CBE)', amountBirr: -1000.0, date: '2026-10-06', method: 'CBE Birr', status: 'completed' },
-      { id: 'tx-4', type: 'earning', description: 'Daily Knowledge Quiz Champion Reward', amountBirr: 300.0, date: '2026-10-05', status: 'completed' },
-    ],
+  }>(() => {
+    const saved = localStorage.getItem('zw_user_wallet');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return {
+      balanceBirr: 3450.0,
+      balanceUsd: 62.7,
+      lifetimeEarnedBirr: 5800.0,
+      transactions: [
+        { id: 'tx-1', type: 'earning', description: 'Chamber 1 Dialogue Participation Reward', amountBirr: 150.0, date: '2026-10-08', status: 'completed' },
+        { id: 'tx-2', type: 'earning', description: 'Content Sharing & Global Community Engagement', amountBirr: 85.0, date: '2026-10-07', status: 'completed' },
+        { id: 'tx-3', type: 'withdrawal', description: 'Withdrawal to Commercial Bank of Ethiopia (CBE)', amountBirr: -1000.0, date: '2026-10-06', method: 'CBE Birr', status: 'completed' },
+        { id: 'tx-4', type: 'earning', description: 'Daily Knowledge Quiz Champion Reward', amountBirr: 300.0, date: '2026-10-05', status: 'completed' },
+      ],
+    };
   });
 
   // Private Founder Vault (Secretly secured with PIN/Passcode)
@@ -707,10 +757,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Auto-translate to target language
+    // Auto-translate to target language (online or offline)
     let translated = text;
+    const isMsgOffline = !effectiveOnline;
     if (autoTranslateEnabled) {
-      translated = await translateText(text, 'Auto', userLanguage === 'am' ? 'Amharic' : 'English');
+      if (!effectiveOnline) {
+        translated = offlineTranslate(text, userLanguage === 'am' ? 'Amharic' : 'English');
+      } else {
+        try {
+          translated = await translateText(text, 'Auto', userLanguage === 'am' ? 'Amharic' : 'English');
+        } catch {
+          translated = offlineTranslate(text, userLanguage === 'am' ? 'Amharic' : 'English');
+        }
+      }
     }
 
     const newMsg: ChamberMessage = {
@@ -725,12 +784,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       translatedText: translated,
       targetLanguage: userLanguage,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isOffline: isMsgOffline,
     };
 
-    setMessagesByChamber((prev) => ({
-      ...prev,
-      [activeChamberCode]: [...(prev[activeChamberCode] || []), newMsg],
-    }));
+    setMessagesByChamber((prev) => {
+      const updated = {
+        ...prev,
+        [activeChamberCode]: [...(prev[activeChamberCode] || []), newMsg],
+      };
+      localStorage.setItem('zw_chamber_messages', JSON.stringify(updated));
+      return updated;
+    });
 
     // Reward for active discourse
     rewardUserAction('speak');
@@ -772,72 +836,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const founderReserve = grossReward * 0.05;
     const netUserEarning = grossReward * 0.85;
 
-    setUserWallet((prev) => ({
-      ...prev,
-      balanceBirr: prev.balanceBirr + netUserEarning,
-      lifetimeEarnedBirr: prev.lifetimeEarnedBirr + netUserEarning,
-      transactions: [
-        {
-          id: `tx-${Date.now()}`,
-          type: 'earning',
-          description: `${desc} (Net 85% + 10% Bank + 5% Reserve deducted)`,
-          amountBirr: netUserEarning,
-          date: new Date().toISOString().split('T')[0],
-          status: 'completed',
-        },
-        ...prev.transactions.slice(0, 30),
-      ],
-    }));
+    setUserWallet((prev) => {
+      const updated = {
+        ...prev,
+        balanceBirr: prev.balanceBirr + netUserEarning,
+        lifetimeEarnedBirr: prev.lifetimeEarnedBirr + netUserEarning,
+        transactions: [
+          {
+            id: `tx-${Date.now()}`,
+            type: 'earning' as const,
+            description: `${desc} (Net 85% + 10% Bank + 5% Reserve deducted)`,
+            amountBirr: netUserEarning,
+            date: new Date().toISOString().split('T')[0],
+            status: 'completed' as const,
+          },
+          ...prev.transactions.slice(0, 30),
+        ],
+      };
+      localStorage.setItem('zw_user_wallet', JSON.stringify(updated));
+      return updated;
+    });
 
-    setFounderVaultStats((prev) => ({
-      ...prev,
-      totalPlatformVolumeBirr: prev.totalPlatformVolumeBirr + grossReward,
-      bankReserve10PctBirr: prev.bankReserve10PctBirr + bankReserve,
-      creatorReserve5PctBirr: prev.creatorReserve5PctBirr + founderReserve,
-      creatorDirectPayoutsBirr: prev.creatorDirectPayoutsBirr + (grossReward * 0.02),
-    }));
+    setFounderVaultStats((prev) => {
+      const updated = {
+        ...prev,
+        totalPlatformVolumeBirr: prev.totalPlatformVolumeBirr + grossReward,
+        bankReserve10PctBirr: prev.bankReserve10PctBirr + bankReserve,
+        creatorReserve5PctBirr: prev.creatorReserve5PctBirr + founderReserve,
+        creatorDirectPayoutsBirr: prev.creatorDirectPayoutsBirr + (grossReward * 0.02),
+      };
+      localStorage.setItem('zw_founder_vault_stats', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const makeWithdrawal = (bankName: string, accountNumber: string, amountBirr: number): boolean => {
     if (amountBirr > userWallet.balanceBirr || amountBirr <= 0) return false;
 
-    setUserWallet((prev) => ({
-      ...prev,
-      balanceBirr: prev.balanceBirr - amountBirr,
-      transactions: [
-        {
-          id: `tx-${Date.now()}`,
-          type: 'withdrawal',
-          description: `Direct payout to ${bankName} (A/C: ${accountNumber})`,
-          amountBirr: -amountBirr,
-          date: new Date().toISOString().split('T')[0],
-          method: bankName,
-          status: 'completed',
-        },
-        ...prev.transactions,
-      ],
-    }));
+    setUserWallet((prev) => {
+      const updated = {
+        ...prev,
+        balanceBirr: prev.balanceBirr - amountBirr,
+        transactions: [
+          {
+            id: `tx-${Date.now()}`,
+            type: 'withdrawal' as const,
+            description: !effectiveOnline
+              ? `Direct payout to ${bankName} (A/C: ${accountNumber}) [Offline Queued • በኦፍላይን የተመዘገበ]`
+              : `Direct payout to ${bankName} (A/C: ${accountNumber})`,
+            amountBirr: -amountBirr,
+            date: new Date().toISOString().split('T')[0],
+            method: bankName,
+            status: 'completed' as const,
+          },
+          ...prev.transactions,
+        ],
+      };
+      localStorage.setItem('zw_user_wallet', JSON.stringify(updated));
+      return updated;
+    });
     return true;
   };
 
   const makeDonation = (projectId: string, amountBirr: number): boolean => {
     if (amountBirr > userWallet.balanceBirr || amountBirr <= 0) return false;
 
-    setUserWallet((prev) => ({
-      ...prev,
-      balanceBirr: prev.balanceBirr - amountBirr,
-      transactions: [
-        {
-          id: `tx-${Date.now()}`,
-          type: 'donation',
-          description: `Humanitarian Pledge to Charity Fund #${projectId}`,
-          amountBirr: -amountBirr,
-          date: new Date().toISOString().split('T')[0],
-          status: 'completed',
-        },
-        ...prev.transactions,
-      ],
-    }));
+    setUserWallet((prev) => {
+      const updated = {
+        ...prev,
+        balanceBirr: prev.balanceBirr - amountBirr,
+        transactions: [
+          {
+            id: `tx-${Date.now()}`,
+            type: 'donation' as const,
+            description: `Humanitarian Pledge to Charity Fund #${projectId}`,
+            amountBirr: -amountBirr,
+            date: new Date().toISOString().split('T')[0],
+            status: 'completed' as const,
+          },
+          ...prev.transactions,
+        ],
+      };
+      localStorage.setItem('zw_user_wallet', JSON.stringify(updated));
+      return updated;
+    });
     return true;
   };
 
@@ -845,10 +927,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = { ...currentUser, ...profile, faceVerified: true };
     setCurrentUser(updated);
     localStorage.setItem('zw_user_profile', JSON.stringify(updated));
-    setFounderVaultStats((prev) => ({
-      ...prev,
-      registeredMembersCount: prev.registeredMembersCount + 1,
-    }));
+    setFounderVaultStats((prev) => {
+      const next = {
+        ...prev,
+        registeredMembersCount: prev.registeredMembersCount + 1,
+      };
+      localStorage.setItem('zw_founder_vault_stats', JSON.stringify(next));
+      return next;
+    });
   };
 
   const unlockFounderVault = (pass: string): boolean => {
@@ -915,6 +1001,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleCameraFacingMode,
         startUserCamera,
         stopUserCamera,
+        isOnline,
+        isSimulatedOffline,
+        effectiveOnline,
+        toggleSimulateOffline,
       }}
     >
       {children}

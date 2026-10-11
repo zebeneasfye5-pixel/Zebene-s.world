@@ -57,6 +57,7 @@ export const ChamberView: React.FC = () => {
     toggleCameraFacingMode,
     startUserCamera,
     stopUserCamera,
+    effectiveOnline,
   } = useApp();
 
   const [inputText, setInputText] = useState('');
@@ -921,6 +922,12 @@ export const ChamberView: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-2">
+              {!effectiveOnline && (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span>ኦፍላይን ይሰራል</span>
+                </span>
+              )}
               <button
                 onClick={() => setAutoTranslateEnabled(!autoTranslateEnabled)}
                 className={`text-[10px] px-2 py-1 rounded font-bold transition-colors ${
@@ -970,7 +977,14 @@ export const ChamberView: React.FC = () => {
                         </span>
                         <span className="text-[10px]">{msg.userNationality}</span>
                       </div>
-                      <span className="text-[10px] text-slate-500">{msg.timestamp}</span>
+                      <div className="flex items-center space-x-1.5">
+                        {msg.isOffline && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">
+                            📶 Offline
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500">{msg.timestamp}</span>
+                      </div>
                     </div>
 
                     <div className="text-slate-300 text-xs">{msg.originalText}</div>

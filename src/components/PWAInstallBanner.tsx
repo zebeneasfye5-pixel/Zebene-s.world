@@ -73,15 +73,17 @@ export const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ isOpen, onCl
         <div className="space-y-3 mb-6 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800">
           <div className="flex items-center space-x-2.5 text-slate-300">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Instant launch from Android home screen</span>
+            <span>Instant launch from Android home screen / Play Store icon</span>
           </div>
           <div className="flex items-center space-x-2.5 text-slate-300">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Low data consumption & high-performance audio</span>
+            <span className="font-semibold text-amber-300">
+              ⚡ 100% Offline Support — Works without internet anywhere (ያለ ኢንተርኔት ይሰራል)
+            </span>
           </div>
           <div className="flex items-center space-x-2.5 text-slate-300">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Encrypted local biometric face authentication</span>
+            <span>Encrypted local biometric face authentication & local wallet</span>
           </div>
         </div>
 

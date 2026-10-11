@@ -1,18 +1,38 @@
 {
+  "id": "/",
   "name": "Zebene's World (ዘበነ የመሰረተው አለም)",
-  "short_name": "Zebene World",
+  "short_name": "ZebeneWorld",
   "description": "Global assembly uniting humanity across 7 sovereign chambers with live multilingual AI translation, virtual numbered seats, HD video conference, knowledge horizons, digital wedding hall, charity funds, and civic economy.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#0f172a",
   "orientation": "any",
   "icons": [
     {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icon.svg",
-      "sizes": "any",
+      "sizes": "512x512 any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["social", "communication", "education", "productivity"],
@@ -22,14 +42,14 @@
       "short_name": "Chamber 1",
       "description": "Open Global Plenary Assembly",
       "url": "/?chamber=1",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Wedding Hall",
       "short_name": "Chamber 5",
       "description": "Digital Nuptial Registry",
       "url": "/?chamber=5",
-      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

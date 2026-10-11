@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const BankingAndEconomy: React.FC = () => {
-  const { userWallet, makeWithdrawal, rewardUserAction } = useApp();
+  const { userWallet, makeWithdrawal, rewardUserAction, effectiveOnline } = useApp();
 
   // Bank payout states
   const [selectedBank, setSelectedBank] = useState('Commercial Bank of Ethiopia (CBE)');
@@ -78,7 +78,9 @@ export const BankingAndEconomy: React.FC = () => {
     const ok = makeWithdrawal(selectedBank, accountNumber, withdrawalAmount);
     if (ok) {
       setWithdrawalStatus(
-        `Withdrawal of ${withdrawalAmount} ETB to ${selectedBank} (A/C: ${accountNumber}) initiated successfully! Funds will reflect instantly.`
+        effectiveOnline
+          ? `Withdrawal of ${withdrawalAmount} ETB to ${selectedBank} (A/C: ${accountNumber}) initiated successfully! Funds will reflect instantly.`
+          : `Withdrawal of ${withdrawalAmount} ETB to ${selectedBank} recorded offline! Local wallet updated. (በኦፍላይን የተመዘገበ ክፍያ)`
       );
       setTimeout(() => setWithdrawalStatus(null), 6000);
     }

@@ -10,6 +10,7 @@ import { BankingAndEconomy } from './components/BankingAndEconomy';
 import { RegistrationModal } from './components/RegistrationModal';
 import { FoundersVaultModal } from './components/FoundersVaultModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { Heart, Globe2, ShieldCheck } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -38,10 +39,11 @@ const AppContent: React.FC = () => {
         {activeTab === 'banking_economy' && <BankingAndEconomy />}
       </main>
 
-      {/* Global Modals */}
+      {/* Global Modals & Indicators */}
       <RegistrationModal />
       <FoundersVaultModal isOpen={founderVaultOpen} onClose={() => setFounderVaultOpen(false)} />
       <PWAInstallBanner isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)} />
+      <OfflineIndicator />
 
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-800/80 py-8 text-xs text-slate-400 mt-12">

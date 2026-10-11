@@ -55,6 +55,7 @@ export interface ChamberMessage {
   targetLanguage?: string;
   timestamp: string;
   isOfficial?: boolean;
+  isOffline?: boolean;
 }
 
 export interface CharityProject {

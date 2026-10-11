@@ -1,25 +1,100 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f59e0b" />
-      <stop offset="50%" stop-color="#f43f5e" />
-      <stop offset="100%" stop-color="#6366f1" />
-    </linearGradient>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
+    <!-- Deep Sovereign Night Radial Gradient -->
+    <radialGradient id="iconBg" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="60%" stop-color="#0f172a" />
       <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- 24K Sovereign Gold Gradient -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="25%" stop-color="#f59e0b" />
+      <stop offset="50%" stop-color="#fbbf24" />
+      <stop offset="75%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#b45309" />
     </linearGradient>
+
+    <!-- Celestial Azure Cyan Gradient -->
+    <linearGradient id="cyanGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#a5f3fc" />
+    </linearGradient>
+
+    <!-- Outer Ambient Glow -->
+    <radialGradient id="auraGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#f59e0b" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0" />
+    </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="128" fill="url(#bg)" />
-  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#grad)" stroke-width="12" stroke-dasharray="8 8" opacity="0.6"/>
-  <circle cx="256" cy="256" r="170" fill="url(#grad)" opacity="0.15" />
-  <!-- Central Globe and ZW monogram -->
-  <path d="M256,96 C167.6,96 96,167.6 96,256 C96,344.4 167.6,416 256,416 C344.4,416 416,344.4 416,256 C416,167.6 344.4,96 256,96 Z" fill="none" stroke="url(#grad)" stroke-width="16"/>
-  <ellipse cx="256" cy="256" rx="90" ry="160" fill="none" stroke="url(#grad)" stroke-width="12" opacity="0.8"/>
-  <line x1="96" y1="256" x2="416" y2="256" stroke="url(#grad)" stroke-width="12" opacity="0.8"/>
-  <line x1="120" y1="176" x2="392" y2="176" stroke="url(#grad)" stroke-width="8" opacity="0.5"/>
-  <line x1="120" y1="336" x2="392" y2="336" stroke="url(#grad)" stroke-width="8" opacity="0.5"/>
-  <!-- ZW Monogram Center -->
-  <rect x="176" y="196" width="160" height="120" rx="24" fill="#020617" opacity="0.9" stroke="url(#grad)" stroke-width="6"/>
-  <text x="256" y="275" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="64" fill="#ffffff" text-anchor="middle" letter-spacing="4">ZW</text>
+
+  <!-- Squircle App Icon Base -->
+  <rect width="512" height="512" rx="128" fill="url(#iconBg)" />
+  <rect width="512" height="512" rx="128" fill="url(#auraGlow)" />
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="url(#goldGradient)" stroke-width="8" opacity="0.4" />
+
+  <!-- Outer Golden Bezel Disc -->
+  <circle cx="256" cy="256" r="215" fill="none" stroke="url(#goldGradient)" stroke-width="8" />
+  <circle cx="256" cy="256" r="202" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="6 6" opacity="0.6" />
+
+  <!-- 7 Sovereign Celestial Stars (7 Chambers of Humanity) -->
+  <g id="stars">
+    <!-- Star 0 (Top) -->
+    <polygon points="256,58 261,70 274,70 264,78 268,90 256,82 244,90 248,78 238,70 251,70" fill="url(#goldGradient)" />
+    <!-- Star 1 -->
+    <polygon points="398,127 403,139 416,139 406,147 410,159 398,151 386,159 390,147 380,139 393,139" fill="url(#goldGradient)" />
+    <!-- Star 2 -->
+    <polygon points="440,290 445,302 458,302 448,310 452,322 440,314 428,322 432,310 422,302 435,302" fill="url(#goldGradient)" />
+    <!-- Star 3 -->
+    <polygon points="345,418 350,430 363,430 353,438 357,450 345,442 333,450 337,438 327,430 340,430" fill="url(#goldGradient)" />
+    <!-- Star 4 -->
+    <polygon points="167,418 172,430 185,430 175,438 179,450 167,442 155,450 159,438 149,430 162,430" fill="url(#goldGradient)" />
+    <!-- Star 5 -->
+    <polygon points="72,290 77,302 90,302 80,310 84,322 72,314 60,322 64,310 54,302 67,302" fill="url(#goldGradient)" />
+    <!-- Star 6 -->
+    <polygon points="114,127 119,139 132,139 122,147 126,159 114,151 102,159 106,147 96,139 109,139" fill="url(#goldGradient)" />
+  </g>
+
+  <!-- International Radiant Globe -->
+  <circle cx="256" cy="256" r="148" fill="#091428" stroke="url(#cyanGradient)" stroke-width="6" />
+
+  <!-- Globe Coordinates: Parallels -->
+  <ellipse cx="256" cy="256" rx="148" ry="54" fill="none" stroke="#38bdf8" stroke-width="3" opacity="0.6" />
+  <ellipse cx="256" cy="210" rx="130" ry="36" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6 4" opacity="0.4" />
+  <ellipse cx="256" cy="302" rx="130" ry="36" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6 4" opacity="0.4" />
+
+  <!-- Globe Coordinates: Meridians -->
+  <ellipse cx="256" cy="256" rx="72" ry="148" fill="none" stroke="#38bdf8" stroke-width="3" opacity="0.6" />
+  <ellipse cx="256" cy="256" rx="26" ry="148" fill="none" stroke="#38bdf8" stroke-width="2.5" opacity="0.5" />
+  <line x1="256" y1="108" x2="256" y2="404" stroke="url(#cyanGradient)" stroke-width="3.5" opacity="0.7" />
+  <line x1="108" y1="256" x2="404" y2="256" stroke="url(#cyanGradient)" stroke-width="3.5" opacity="0.7" />
+
+  <!-- Dynamic Golden Orbital Planetary Rings -->
+  <ellipse cx="256" cy="256" rx="172" ry="50" transform="rotate(-28 256 256)" fill="none" stroke="url(#goldGradient)" stroke-width="6" stroke-dasharray="320 20 90 20" />
+  <ellipse cx="256" cy="256" rx="178" ry="54" transform="rotate(28 256 256)" fill="none" stroke="#38bdf8" stroke-width="3.5" opacity="0.7" />
+
+  <!-- Orbital Satellites -->
+  <circle cx="106" cy="176" r="7" fill="#fef08a" stroke="#d97706" stroke-width="2" />
+  <circle cx="406" cy="336" r="7" fill="#38bdf8" stroke="#0284c7" stroke-width="2" />
+
+  <!-- Central Sovereign Medallion Seal -->
+  <circle cx="256" cy="256" r="78" fill="#020617" stroke="url(#goldGradient)" stroke-width="7" />
+  <circle cx="256" cy="256" r="70" fill="none" stroke="#d97706" stroke-width="2" opacity="0.6" />
+
+  <!-- Sovereign Olive Peace Laurel Arc -->
+  <path d="M198,270 C198,298 222,316 256,316 C290,316 314,298 314,270" fill="none" stroke="url(#goldGradient)" stroke-width="4.5" stroke-linecap="round" />
+  <!-- Laurel Leaves -->
+  <path d="M206,288 Q198,280 202,274" fill="none" stroke="#fbbf24" stroke-width="3" />
+  <path d="M224,306 Q216,302 218,294" fill="none" stroke="#fbbf24" stroke-width="3" />
+  <path d="M306,288 Q314,280 310,274" fill="none" stroke="#fbbf24" stroke-width="3" />
+  <path d="M288,306 Q296,302 294,294" fill="none" stroke="#fbbf24" stroke-width="3" />
+
+  <!-- Sovereign Apex Crown -->
+  <path d="M234,204 L245,218 L256,198 L267,218 L278,204 L274,222 L238,222 Z" fill="url(#goldGradient)" />
+
+  <!-- Monogram ZW Typography -->
+  <text x="256" y="272" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="52" letter-spacing="3" fill="url(#goldGradient)" text-anchor="middle">ZW</text>
+  <circle cx="256" cy="195" r="3.5" fill="#ffffff" />
 </svg>

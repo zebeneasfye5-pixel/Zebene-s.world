@@ -10,13 +10,16 @@ import { BankingAndEconomy } from './components/BankingAndEconomy';
 import { RegistrationModal } from './components/RegistrationModal';
 import { FoundersVaultModal } from './components/FoundersVaultModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { PlayStoreModal } from './components/PlayStoreModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { GlobalEmblem } from './components/GlobalEmblem';
 import { Heart, Globe2, ShieldCheck } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
   const [founderVaultOpen, setFounderVaultOpen] = useState(false);
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
+  const [playStoreModalOpen, setPlayStoreModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
@@ -24,6 +27,7 @@ const AppContent: React.FC = () => {
       <Navbar
         onOpenFounderVault={() => setFounderVaultOpen(true)}
         onOpenPWA={() => setPwaModalOpen(true)}
+        onOpenPlayStoreModal={() => setPlayStoreModalOpen(true)}
       />
 
       {/* Main Container */}
@@ -42,16 +46,23 @@ const AppContent: React.FC = () => {
       {/* Global Modals & Indicators */}
       <RegistrationModal />
       <FoundersVaultModal isOpen={founderVaultOpen} onClose={() => setFounderVaultOpen(false)} />
-      <PWAInstallBanner isOpen={pwaModalOpen} onClose={() => setPwaModalOpen(false)} />
+      <PWAInstallBanner
+        isOpen={pwaModalOpen}
+        onClose={() => setPwaModalOpen(false)}
+        onOpenPlayStoreGuide={() => setPlayStoreModalOpen(true)}
+      />
+      <PlayStoreModal
+        isOpen={playStoreModalOpen}
+        onClose={() => setPlayStoreModalOpen(false)}
+        onOpenInstallPWA={() => setPwaModalOpen(true)}
+      />
       <OfflineIndicator />
 
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-800/80 py-8 text-xs text-slate-400 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center font-bold text-white text-sm">
-              ZW
-            </div>
+            <GlobalEmblem size="sm" showGlow={false} />
             <div>
               <p className="font-bold text-slate-200">Zebene's World • ዘበነ የመሰረተው አለም</p>
               <p className="text-[11px] text-slate-500">Universal Sovereign Assembly • 7 Sovereign Chambers</p>

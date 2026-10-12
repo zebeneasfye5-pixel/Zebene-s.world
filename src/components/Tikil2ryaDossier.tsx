@@ -49,6 +49,7 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
   const { userLanguage, legalCertificate, acceptLegalCompact, setActiveTab } = useApp();
 
   const [activeTab, setActiveTabLocal] = useState<'purpose' | 'criminal_directives' | 'matrix' | 'pledge'>('purpose');
+  const [bilingualMode, setBilingualMode] = useState<'bilingual' | 'amharic' | 'english'>('bilingual');
   const [selectedLanguage, setSelectedLanguage] = useState<string>(
     TIKIL_2RYA_MULTILINGUAL_PURPOSE[userLanguage] ? userLanguage : 'am'
   );
@@ -61,6 +62,8 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
   const [pledgeSigned, setPledgeSigned] = useState<boolean>(false);
 
   const currentPurpose = TIKIL_2RYA_MULTILINGUAL_PURPOSE[selectedLanguage] || TIKIL_2RYA_MULTILINGUAL_PURPOSE['am'];
+  const englishPurpose = TIKIL_2RYA_MULTILINGUAL_PURPOSE['en'];
+  const amharicPurpose = TIKIL_2RYA_MULTILINGUAL_PURPOSE['am'];
 
   const handleSpeak = (id: string, text: string, lang = 'am') => {
     if (speakingId === id) {
@@ -401,9 +404,19 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   አጠቃላይ ይዘትና የሰው ልጆች ውህደት (Comprehensive Overview)
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                   {currentPurpose.overview}
                 </p>
+                {bilingualMode === 'bilingual' && selectedLanguage !== 'en' && englishPurpose && (
+                  <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-900 pt-2 italic">
+                    <strong className="text-indigo-400 not-italic">English Translation:</strong> {englishPurpose.overview}
+                  </p>
+                )}
+                {bilingualMode === 'bilingual' && selectedLanguage === 'en' && amharicPurpose && (
+                  <p className="text-xs text-amber-200/90 leading-relaxed border-t border-slate-900 pt-2">
+                    <strong className="text-amber-400">የአማርኛ ትርጉም:</strong> {amharicPurpose.overview}
+                  </p>
+                )}
               </div>
 
               <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-5 space-y-3">
@@ -411,9 +424,19 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
                   <BookOpen className="w-4 h-4 text-indigo-400" />
                   የመስራቹ የፍልስፍና መነሻ (Founding Philosophy & Core Ethics)
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                   {currentPurpose.foundingPhilosophy}
                 </p>
+                {bilingualMode === 'bilingual' && selectedLanguage !== 'en' && englishPurpose && (
+                  <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-900 pt-2 italic">
+                    <strong className="text-indigo-400 not-italic">English Philosophy:</strong> {englishPurpose.foundingPhilosophy}
+                  </p>
+                )}
+                {bilingualMode === 'bilingual' && selectedLanguage === 'en' && amharicPurpose && (
+                  <p className="text-xs text-indigo-200/90 leading-relaxed border-t border-slate-900 pt-2">
+                    <strong className="text-indigo-400">የአማርኛ ፍልስፍና:</strong> {amharicPurpose.foundingPhilosophy}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -583,15 +606,46 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
               </button>
             </div>
 
-            <div className="relative w-full sm:w-64 flex-shrink-0">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="በጥፋት ወይም በህግ ፈልግ..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"
-              />
+            <div className="flex items-center space-x-2 shrink-0">
+              {/* Bilingual Display Mode Toggle for Directives */}
+              <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 text-[11px]">
+                <button
+                  onClick={() => setBilingualMode('bilingual')}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                    bilingualMode === 'bilingual' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Bilingual: View Amharic and English side-by-side"
+                >
+                  🌐 ሁለትዮሽ (Dual)
+                </button>
+                <button
+                  onClick={() => setBilingualMode('amharic')}
+                  className={`px-2 py-1 rounded-lg font-bold transition-all ${
+                    bilingualMode === 'amharic' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  አማርኛ
+                </button>
+                <button
+                  onClick={() => setBilingualMode('english')}
+                  className={`px-2 py-1 rounded-lg font-bold transition-all ${
+                    bilingualMode === 'english' ? 'bg-slate-800 text-amber-300' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  EN
+                </button>
+              </div>
+
+              <div className="relative w-full sm:w-56 flex-shrink-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="በጥፋት ወይም በህግ ፈልግ..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                />
+              </div>
             </div>
           </div>
 
@@ -662,13 +716,25 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
                       <AlertTriangle className="w-4 h-4 text-rose-400" />
                       የተከለከሉ ዝርዝር ድርጊቶች (Explicit Prohibitions)
                     </h4>
-                    <ul className="space-y-1.5 text-xs text-slate-300">
-                      {v.amharicProhibitedActions.map((act, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-rose-400 font-bold">•</span>
-                          <span>{act}</span>
-                        </li>
-                      ))}
+                    <ul className="space-y-2 text-xs text-slate-300">
+                      {v.amharicProhibitedActions.map((act, i) => {
+                        const englishAct = v.prohibitedActions[i];
+                        return (
+                          <li key={i} className="flex items-start gap-2 border-b border-slate-900/60 pb-1.5 last:border-0">
+                            <span className="text-rose-400 font-bold">•</span>
+                            <div className="space-y-0.5">
+                              {bilingualMode !== 'english' && (
+                                <p className="text-slate-200">{act}</p>
+                              )}
+                              {bilingualMode !== 'amharic' && englishAct && (
+                                <p className="text-slate-400 text-[11px] italic">
+                                  {englishAct}
+                                </p>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
 
@@ -678,26 +744,48 @@ export const Tikil2ryaDossier: React.FC<Tikil2ryaDossierProps> = ({
                       <ShieldAlert className="w-4 h-4 text-amber-400" />
                       የቅጣት እርምጃዎችና የህግ ተጠያቂነት (Penalties & Consequences)
                     </h4>
-                    <ul className="space-y-1.5 text-xs text-slate-300">
-                      {v.amharicPenaltiesAndConsequences.map((pen, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-amber-400 font-bold">✓</span>
-                          <span>{pen}</span>
-                        </li>
-                      ))}
+                    <ul className="space-y-2 text-xs text-slate-300">
+                      {v.amharicPenaltiesAndConsequences.map((pen, i) => {
+                        const englishPen = v.penaltiesAndConsequences[i];
+                        return (
+                          <li key={i} className="flex items-start gap-2 border-b border-slate-900/60 pb-1.5 last:border-0">
+                            <span className="text-amber-400 font-bold">✓</span>
+                            <div className="space-y-0.5">
+                              {bilingualMode !== 'english' && (
+                                <p className="text-slate-200">{pen}</p>
+                              )}
+                              {bilingualMode !== 'amharic' && englishPen && (
+                                <p className="text-slate-400 text-[11px] italic">
+                                  {englishPen}
+                                </p>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 </div>
 
                 {/* Forensics and Evidence Trail */}
-                <div className="bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                    <span>
-                      <strong>የማስረጃ ፎረንሲክስ መመርመሪያ:</strong> {v.amharicInvestigationMethod}
-                    </span>
+                <div className="bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 gap-2">
+                  <div className="flex items-start gap-2">
+                    <Eye className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      {bilingualMode !== 'english' && (
+                        <span>
+                          <strong>የማስረጃ ፎረንሲክስ መመርመሪያ:</strong> {v.amharicInvestigationMethod}
+                        </span>
+                      )}
+                      {bilingualMode === 'bilingual' && <span className="block text-slate-500 text-[11px]">{v.investigationMethod}</span>}
+                      {bilingualMode === 'english' && (
+                        <span>
+                          <strong>Forensic Investigation:</strong> {v.investigationMethod}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-[11px] text-emerald-400 hidden sm:inline">ኢንተርፖል ተባባሪ ✓</span>
+                  <span className="text-[11px] text-emerald-400 shrink-0">ኢንተርፖል ተባባሪ ✓ (Interpol & Legal Rails)</span>
                 </div>
               </div>
             ))}

@@ -17,6 +17,7 @@ import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { PlayStoreModal } from './components/PlayStoreModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { GlobalEmblem } from './components/GlobalEmblem';
+import { GlobalAssemblyHero } from './components/GlobalAssemblyHero';
 import { Heart, Globe2, ShieldCheck, Scale, FileCheck, FolderOpen, Key } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -46,6 +47,9 @@ const AppContent: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
+        {/* Top Hero Banner: Grand Assembly Hall with flags & Real-Time Live Voice Interpretation Console */}
+        <GlobalAssemblyHero />
+
         {/* Chamber Navigator (always available on chamber tab or accessible) */}
         {activeTab === 'chamber' && <ChamberNavigator />}
 

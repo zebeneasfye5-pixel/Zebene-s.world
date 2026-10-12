@@ -947,26 +947,42 @@ export const ChamberView: React.FC = () => {
         {/* Right Column (4 cols): Live Multilingual Chat with Instant AI Translation & Voice TTS */}
         <div className="lg:col-span-4 flex flex-col h-[750px] bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
           {/* Chat Header */}
-          <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+          <div className="p-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
             <div>
               <h3 className="font-extrabold text-xs text-slate-100 flex items-center gap-1.5">
                 <span>Chamber #{activeChamberCode} Live Assembly Chat</span>
+                <span className="text-amber-400 font-bold">(የቀጥታ ጉባኤ ውይይት)</span>
               </h3>
               <p className="text-[10px] text-amber-400 font-medium">
-                Auto-translated to your language ({userLanguage.toUpperCase()})
+                Auto-translated to your language ({userLanguage.toUpperCase()}) • በቀጥታ በድምፅ ይተረጎማል
               </p>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5">
               {!effectiveOnline && (
                 <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   <span>ኦፍላይን ይሰራል</span>
                 </span>
               )}
+              {/* Dedicated Hear / Audio Mode Button in Chamber */}
+              <button
+                onClick={() => {
+                  const lastMsg = [...messages].reverse().find((m) => m.translatedText || m.originalText);
+                  if (lastMsg) {
+                    speakText(lastMsg.translatedText || lastMsg.originalText, userLanguage);
+                  }
+                }}
+                className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center space-x-1 transition-colors"
+                title="ለመስማት: የመጨረሻውን መልዕክት በድምፅ አዳምጥ (Hear: Listen to latest message)"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">ለመስማት (Hear)</span>
+              </button>
+
               <button
                 onClick={() => setAutoTranslateEnabled(!autoTranslateEnabled)}
-                className={`text-[10px] px-2 py-1 rounded font-bold transition-colors ${
+                className={`text-[10px] px-2 py-1 rounded-lg font-bold transition-colors ${
                   autoTranslateEnabled
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                     : 'bg-slate-800 text-slate-500'
@@ -1054,14 +1070,15 @@ export const ChamberView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleMicVoiceInput}
-                className={`p-2.5 rounded-xl border transition-all ${
+                className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center space-x-1.5 transition-all ${
                   isListeningMic
-                    ? 'bg-rose-500 text-white animate-pulse border-rose-400'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    ? 'bg-rose-500 text-white animate-pulse border-rose-400 shadow-md shadow-rose-500/20'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500'
                 }`}
-                title={isListeningMic ? 'Listening... Speak now' : 'Speak into Microphone in your native language'}
+                title={isListeningMic ? 'ድምፅ እየተቀበለ ነው (Listening)... ለመጨረስ ተጫን' : 'ለመናገር ተጫን (Click to Speak in your native language)'}
               >
                 <Mic className="w-4 h-4" />
+                <span className="text-[11px] font-black">{isListeningMic ? 'እያዳመጠ ነው...' : 'ለመናገር (Speak)'}</span>
               </button>
 
               <input
@@ -1070,8 +1087,8 @@ export const ChamberView: React.FC = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={
                   isListeningMic
-                    ? 'Listening to your speech...'
-                    : 'Type or speak in any language (Amharic, English, etc.)...'
+                    ? 'ድምፅህ እየተጻፈ ነው... (Listening to your speech...)'
+                    : 'በመረጥከው ቋንቋ ጻፍ ወይም ተናገር (Type or speak in any language)...'
                 }
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
               />
@@ -1080,12 +1097,13 @@ export const ChamberView: React.FC = () => {
                 type="submit"
                 disabled={!inputText.trim() || isSending}
                 className="p-2.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 disabled:opacity-40 text-white rounded-xl shadow-md shadow-amber-500/20 transition-transform active:scale-95"
+                title="ላክ (Send)"
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
             <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
-              <span>Speaks Amharic, Oromo, English, Arabic, Spanish, French & 100+ tongues.</span>
+              <span>ቋንቋዎች (Tongues): አማርኛ፣ ኦሮምኛ፣ English፣ ትግርኛ፣ العربية፣ French & 100+</span>
               <span className="text-amber-400/80">+20 ETB Earned per Contribution</span>
             </div>
           </form>

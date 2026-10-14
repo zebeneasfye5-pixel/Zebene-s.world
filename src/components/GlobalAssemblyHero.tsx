@@ -76,7 +76,7 @@ export const GlobalAssemblyHero: React.FC = () => {
     {
       id: 'demo-1',
       timestamp: '12:00',
-      speakerName: 'ክቡር ዘበነ አስፋው (Convener)',
+      speakerName: 'ክቡር ዘበነ አስፍዬ (Zebene Asfeye - Convener)',
       sourceLang: 'am',
       sourceText: 'ሰላም ለሁሉም የአለም ህዝቦች ይሁን! በጋራ ተወያይተን አለማችንን ወደተሻለ ሰላም እናሻግራለን።',
       targetLang: 'en',

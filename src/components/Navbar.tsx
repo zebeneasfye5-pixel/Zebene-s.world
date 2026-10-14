@@ -300,13 +300,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>ጥቅል መመሪያ</span>
             </button>
 
-            {/* Private Founder Vault Button (Protected) */}
+            {/* Private Founder Vault Button (Protected with key 2026) */}
             <button
               onClick={onOpenFounderVault}
-              title="Founder Private Revenue Vault (Passkey Protected)"
-              className="p-2 text-slate-500 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
+              title="የገንቢው የገቢ ቁልፍ / Developer Revenue Vault (መክፈቻ: 2026)"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-amber-300 bg-slate-900/60 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-500/60 transition-all shadow-sm"
             >
-              <ShieldAlert className="w-4 h-4" />
+              <Key className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden xl:inline text-[11px] font-mono text-amber-300">የገቢ ቁልፍ (2026)</span>
             </button>
 
             {/* Mobile Menu Toggle */}
@@ -478,6 +479,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Scale className="w-3.5 h-3.5 text-amber-400" />
               <span>ዓለም አቀፍ የሕግ ተጠያቂነትና የአጠቃቀም መመሪያ</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onOpenFounderVault();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full py-2 px-3 bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-center space-x-2"
+            >
+              <Key className="w-3.5 h-3.5 text-amber-400" />
+              <span>የገንቢው የገቢ ቁልፍ (መክፈቻ: 2026) / Developer Revenue Key</span>
             </button>
           </div>
 

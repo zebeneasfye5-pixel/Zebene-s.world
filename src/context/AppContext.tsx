@@ -54,8 +54,11 @@ interface AppContextType {
   };
   founderVault: {
     isUnlocked: boolean;
+    currentPasscode: string;
     unlockVault: (pass: string) => boolean;
     lockVault: () => void;
+    changePasscode: (oldPass: string, newPass: string) => { success: boolean; message: string };
+    resetPasscode: () => void;
     totalPlatformVolumeBirr: number;
     creatorReserve5PctBirr: number;
     bankReserve10PctBirr: number;
@@ -96,7 +99,7 @@ const AppContext = createContext<AppContextType | null>(null);
 // Generate initial seats for chambers
 function createInitialSeats(count: number = 32): Seat[] {
   const sampleParticipants = [
-    { name: 'Zebene Asfaw (Founder)', nationality: 'Ethiopia 🇪🇹', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', lang: 'Amharic', seatNum: 1 },
+    { name: 'Zebene Asfeye / ዘበነ አስፍዬ (Founder)', nationality: 'Ethiopia 🇪🇹', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', lang: 'Amharic', seatNum: 1 },
     { name: 'Dr. Amina Diallo', nationality: 'Senegal 🇸🇳', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80', lang: 'French', seatNum: 2 },
     { name: 'Marcus Chen', nationality: 'Singapore 🇸🇬', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80', lang: 'English', seatNum: 3 },
     { name: 'Elena Rostova', nationality: 'Greece 🇬🇷', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80', lang: 'Greek', seatNum: 4 },
@@ -138,7 +141,7 @@ function createSeedMembers(): Record<number, ChamberMemberRegistration[]> {
         badgeId: 'CH1-DELEGATE-1001',
         chamberCode: 1,
         userId: 'usr-zebene',
-        fullName: 'Zebene Asfaw',
+        fullName: 'Zebene Asfeye (ዘበነ አስፍዬ)',
         nationality: 'Ethiopia 🇪🇹',
         photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         registeredRole: 'Plenary Assembly Convener',
@@ -441,7 +444,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: 'msg-1-1',
           chamberCode: 1,
           userId: 'usr-zebene',
-          userName: 'Zebene Asfaw (Founder)',
+          userName: 'Zebene Asfeye / ዘበነ አስፍዬ (Founder)',
           userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
           userNationality: 'Ethiopia 🇪🇹',
           originalText: 'እንኳን ወደ ዘበነ የመሰረተው አለም የሁሉም የጋራ ቤት በሰላም መጣችሁ! በጋራ እንማማር፣ እውቀት እንለዋወጥ፣ ሰላምን እናበርክት።',
@@ -576,7 +579,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
-  // Private Founder Vault (Secretly secured with PIN/Passcode)
+  // Private Founder Vault (Secretly secured with PIN/Passcode, default 2026, customizable)
+  const [founderPasscode, setFounderPasscode] = useState<string>(() => {
+    return localStorage.getItem('zw_founder_vault_pin') || '2026';
+  });
   const [founderVaultUnlocked, setFounderVaultUnlocked] = useState(false);
   const [founderVaultStats, setFounderVaultStats] = useState({
     totalPlatformVolumeBirr: 4892000.0,
@@ -972,7 +978,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const unlockFounderVault = (pass: string): boolean => {
-    if (pass === 'zebene2026' || pass === 'zebene' || pass === 'admin123') {
+    const trimmed = pass.trim();
+    // Default 2026, or current custom passcode set by the developer
+    if (trimmed === founderPasscode || trimmed === '2026' || trimmed === 'zebene2026') {
       setFounderVaultUnlocked(true);
       return true;
     }
@@ -981,6 +989,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const lockFounderVault = () => {
     setFounderVaultUnlocked(false);
+  };
+
+  const changeFounderPasscode = (oldPass: string, newPass: string): { success: boolean; message: string } => {
+    const trimmedOld = oldPass.trim();
+    const trimmedNew = newPass.trim();
+    if (trimmedOld !== founderPasscode && trimmedOld !== '2026') {
+      return {
+        success: false,
+        message: 'የአሁኑ ሚስጥር ቁጥር የተሳሳተ ነው! / The current passcode you entered is incorrect.',
+      };
+    }
+    if (!trimmedNew || trimmedNew.length < 3) {
+      return {
+        success: false,
+        message: 'አዲሱ ሚስጥር ቁጥር ቢያንስ 3 አሃዞች ወይም ፊደላት መሆን አለበት / New passcode must be at least 3 characters.',
+      };
+    }
+    setFounderPasscode(trimmedNew);
+    localStorage.setItem('zw_founder_vault_pin', trimmedNew);
+    return {
+      success: true,
+      message: `ሚስጥር ቁጥሩ በተሳካ ሁኔታ ተቀይሯል! አዲሱ መክፈቻ: ${trimmedNew} / Passcode successfully updated to ${trimmedNew}!`,
+    };
+  };
+
+  const resetFounderPasscode = () => {
+    setFounderPasscode('2026');
+    localStorage.setItem('zw_founder_vault_pin', '2026');
   };
 
   return (
@@ -1013,8 +1049,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userWallet,
         founderVault: {
           isUnlocked: founderVaultUnlocked,
+          currentPasscode: founderPasscode,
           unlockVault: unlockFounderVault,
           lockVault: lockFounderVault,
+          changePasscode: changeFounderPasscode,
+          resetPasscode: resetFounderPasscode,
           totalPlatformVolumeBirr: founderVaultStats.totalPlatformVolumeBirr,
           creatorReserve5PctBirr: founderVaultStats.creatorReserve5PctBirr,
           bankReserve10PctBirr: founderVaultStats.bankReserve10PctBirr,

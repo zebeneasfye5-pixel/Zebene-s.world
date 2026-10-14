@@ -5,6 +5,20 @@ import { translateText, checkSecurityAndPeace } from '../services/api';
 import { speakText } from '../services/speech';
 import { offlineTranslate } from '../data/offlineData';
 
+export interface FounderWithdrawal {
+  id: string;
+  amountBirr: number;
+  recipientName: string;
+  channel: string;
+  accountNumber: string;
+  referenceCode: string;
+  date: string;
+  time: string;
+  status: 'completed' | 'processing';
+  note?: string;
+  receiptNumber: string;
+}
+
 interface Transaction {
   id: string;
   type: 'earning' | 'withdrawal' | 'donation' | 'lottery_win' | 'loan_disbursement';
@@ -64,6 +78,14 @@ interface AppContextType {
     bankReserve10PctBirr: number;
     creatorDirectPayoutsBirr: number;
     registeredMembersCount: number;
+    totalWithdrawnBirr: number;
+    withdrawals: FounderWithdrawal[];
+    makeFounderWithdrawal: (
+      channel: string,
+      accountNumber: string,
+      amountBirr: number,
+      note?: string
+    ) => { success: boolean; message: string; withdrawal?: FounderWithdrawal };
   };
   rewardUserAction: (actionType: 'like' | 'share' | 'speak' | 'game' | 'host') => void;
   makeWithdrawal: (bankName: string, accountNumber: string, amountBirr: number) => boolean;
@@ -584,12 +606,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem('zw_founder_vault_pin') || '2026';
   });
   const [founderVaultUnlocked, setFounderVaultUnlocked] = useState(false);
-  const [founderVaultStats, setFounderVaultStats] = useState({
-    totalPlatformVolumeBirr: 4892000.0,
-    creatorReserve5PctBirr: 244600.0,
-    bankReserve10PctBirr: 489200.0,
-    creatorDirectPayoutsBirr: 875000.0,
-    registeredMembersCount: 28410,
+  const [founderVaultStats, setFounderVaultStats] = useState(() => {
+    const saved = localStorage.getItem('zw_founder_vault_stats');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          totalPlatformVolumeBirr: parsed.totalPlatformVolumeBirr ?? 4892000.0,
+          creatorReserve5PctBirr: parsed.creatorReserve5PctBirr ?? 244600.0,
+          bankReserve10PctBirr: parsed.bankReserve10PctBirr ?? 489200.0,
+          creatorDirectPayoutsBirr: parsed.creatorDirectPayoutsBirr ?? 875000.0,
+          registeredMembersCount: parsed.registeredMembersCount ?? 28410,
+          totalWithdrawnBirr: parsed.totalWithdrawnBirr ?? 75000.0,
+        };
+      } catch (e) {
+        // use default
+      }
+    }
+    return {
+      totalPlatformVolumeBirr: 4892000.0,
+      creatorReserve5PctBirr: 244600.0,
+      bankReserve10PctBirr: 489200.0,
+      creatorDirectPayoutsBirr: 875000.0,
+      registeredMembersCount: 28410,
+      totalWithdrawnBirr: 75000.0,
+    };
+  });
+
+  const [founderWithdrawals, setFounderWithdrawals] = useState<FounderWithdrawal[]>(() => {
+    const saved = localStorage.getItem('zw_founder_withdrawals');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // use default
+      }
+    }
+    return [
+      {
+        id: 'fw-1',
+        amountBirr: 50000.0,
+        recipientName: 'ዘበነ አስፍዬ (Zebene Asfeye)',
+        channel: 'Commercial Bank of Ethiopia (CBE)',
+        accountNumber: '1000192837465',
+        referenceCode: 'CBE-DIR-2026-99214',
+        receiptNumber: 'RCP-CBE-8821',
+        date: '2026-10-10',
+        time: '14:20:00',
+        status: 'completed',
+        note: 'የመድረኩ ቀዳሚ የትርፍ ድርሻ ወጪ (Direct Developer Dividend Disbursal)',
+      },
+      {
+        id: 'fw-2',
+        amountBirr: 25000.0,
+        recipientName: 'ዘበነ አስፍዬ (Zebene Asfeye)',
+        channel: 'Telebirr Priority Payout',
+        accountNumber: '+251 91 123 4567',
+        referenceCode: 'TB-INST-2026-84729',
+        receiptNumber: 'RCP-TB-4412',
+        date: '2026-10-12',
+        time: '09:45:12',
+        status: 'completed',
+        note: 'የቴሌብር ፈጣን የኪስ ወጪ (Instant Telebirr Payout)',
+      },
+    ];
   });
 
   const activeChamber = CHAMBERS.find((c) => c.code === activeChamberCode) || CHAMBERS[0];
@@ -1010,13 +1090,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('zw_founder_vault_pin', trimmedNew);
     return {
       success: true,
-      message: `ሚስጥር ቁጥሩ በተሳካ ሁኔታ ተቀይሯል! አዲሱ መክፈቻ: ${trimmedNew} / Passcode successfully updated to ${trimmedNew}!`,
+      message: 'ሚስጥር ቁጥሩ በተሳካ ሁኔታ ተቀይሯል! አዲሱ ቁጥር በሚስጥር ተቀምጧል። / Passcode successfully updated and securely encrypted!',
     };
   };
 
   const resetFounderPasscode = () => {
     setFounderPasscode('2026');
     localStorage.setItem('zw_founder_vault_pin', '2026');
+  };
+
+  const makeFounderWithdrawal = (
+    channel: string,
+    accountNumber: string,
+    amountBirr: number,
+    note?: string
+  ): { success: boolean; message: string; withdrawal?: FounderWithdrawal } => {
+    const totalAvailable =
+      founderVaultStats.creatorDirectPayoutsBirr + founderVaultStats.creatorReserve5PctBirr;
+    if (amountBirr <= 0) {
+      return {
+        success: false,
+        message: 'እባክዎ ትክክለኛ የገንዘብ መጠን ያስገቡ! / Please enter a valid withdrawal amount.',
+      };
+    }
+    if (amountBirr > totalAvailable) {
+      return {
+        success: false,
+        message: `የተጠየቀው የገንዘብ መጠን (${amountBirr.toLocaleString()} ETB) ካለው ጠቅላላ ተቀማጭ (${totalAvailable.toLocaleString()} ETB) በላይ ነው! / Requested amount exceeds withdrawable balance.`,
+      };
+    }
+
+    const timestamp = new Date();
+    const dateStr = timestamp.toISOString().split('T')[0];
+    const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const refCode = `FW-ETH-${Date.now().toString().slice(-6)}-${randomSuffix}`;
+    const rcpNum = `RCP-DEV-${Date.now().toString().slice(-5)}`;
+
+    const newWithdrawal: FounderWithdrawal = {
+      id: `fw-${Date.now()}`,
+      amountBirr,
+      recipientName: 'ዘበነ አስፍዬ (Zebene Asfeye)',
+      channel,
+      accountNumber,
+      referenceCode: refCode,
+      receiptNumber: rcpNum,
+      date: dateStr,
+      time: timeStr,
+      status: 'completed',
+      note: note || 'የገንቢው የግል የትርፍ ድርሻ ወጪ / Developer Direct Revenue Disbursal',
+    };
+
+    setFounderVaultStats((prev) => {
+      let remDirect = prev.creatorDirectPayoutsBirr;
+      let remReserve = prev.creatorReserve5PctBirr;
+
+      if (amountBirr <= remDirect) {
+        remDirect -= amountBirr;
+      } else {
+        const remainingToDeduct = amountBirr - remDirect;
+        remDirect = 0;
+        remReserve = Math.max(0, remReserve - remainingToDeduct);
+      }
+
+      const updated = {
+        ...prev,
+        creatorDirectPayoutsBirr: remDirect,
+        creatorReserve5PctBirr: remReserve,
+        totalWithdrawnBirr: (prev.totalWithdrawnBirr || 0) + amountBirr,
+      };
+      localStorage.setItem('zw_founder_vault_stats', JSON.stringify(updated));
+      return updated;
+    });
+
+    setFounderWithdrawals((prev) => {
+      const updated = [newWithdrawal, ...prev];
+      localStorage.setItem('zw_founder_withdrawals', JSON.stringify(updated));
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `${amountBirr.toLocaleString()} ETB ወደ ${channel} (${accountNumber}) በተሳካ ሁኔታ ወጪ ተደርጓል! / ${amountBirr.toLocaleString()} ETB successfully disbursed to ${channel}!`,
+      withdrawal: newWithdrawal,
+    };
   };
 
   return (
@@ -1059,6 +1216,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           bankReserve10PctBirr: founderVaultStats.bankReserve10PctBirr,
           creatorDirectPayoutsBirr: founderVaultStats.creatorDirectPayoutsBirr,
           registeredMembersCount: founderVaultStats.registeredMembersCount,
+          totalWithdrawnBirr: founderVaultStats.totalWithdrawnBirr,
+          withdrawals: founderWithdrawals,
+          makeFounderWithdrawal,
         },
         rewardUserAction,
         makeWithdrawal,

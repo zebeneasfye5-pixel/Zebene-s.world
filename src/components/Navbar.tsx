@@ -300,14 +300,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>ጥቅል መመሪያ</span>
             </button>
 
-            {/* Private Founder Vault Button (Protected with key 2026) */}
+            {/* Private Founder Vault Button (Protected with secret passcode) */}
             <button
               onClick={onOpenFounderVault}
-              title="የገንቢው የገቢ ቁልፍ / Developer Revenue Vault (መክፈቻ: 2026)"
+              title="የገንቢው የገቢ ቁልፍ / Developer Revenue Vault"
               className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-amber-300 bg-slate-900/60 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-500/60 transition-all shadow-sm"
             >
               <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden xl:inline text-[11px] font-mono text-amber-300">የገቢ ቁልፍ (2026)</span>
+              <span className="hidden xl:inline text-[11px] font-mono text-amber-300">የገቢ ቁልፍ</span>
             </button>
 
             {/* Mobile Menu Toggle */}
@@ -489,7 +489,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="w-full py-2 px-3 bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-center space-x-2"
             >
               <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span>የገንቢው የገቢ ቁልፍ (መክፈቻ: 2026) / Developer Revenue Key</span>
+              <span>የገንቢው የገቢ ቁልፍ / Developer Revenue Key</span>
             </button>
           </div>
 

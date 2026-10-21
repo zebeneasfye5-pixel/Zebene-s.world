@@ -62,6 +62,7 @@ export const ChamberView: React.FC = () => {
     setIsLegalModalOpen,
     setActiveTab,
     legalCertificate,
+    broadcastVoiceAudio,
   } = useApp();
 
   const [inputText, setInputText] = useState('');
@@ -115,6 +116,7 @@ export const ChamberView: React.FC = () => {
       (transcript) => {
         setInputText(transcript);
         setIsListeningMic(false);
+        broadcastVoiceAudio(transcript);
       },
       (err) => {
         console.warn('Speech recognition error:', err);
@@ -138,6 +140,7 @@ export const ChamberView: React.FC = () => {
     const text = inputText;
     setInputText('');
     await sendMessage(text);
+    broadcastVoiceAudio(text);
     setIsSending(false);
   };
 
@@ -424,7 +427,7 @@ export const ChamberView: React.FC = () => {
                       <>
                         <div className="relative my-auto flex flex-col items-center justify-center">
                           <img
-                            src={activeSpeakerSeat.occupiedBy.userAvatar}
+                            src={activeSpeakerSeat.occupiedBy.videoFrame || activeSpeakerSeat.occupiedBy.userAvatar}
                             alt={activeSpeakerSeat.occupiedBy.userName}
                             className="w-36 h-36 sm:w-44 sm:h-44 rounded-3xl object-cover shadow-2xl border-4 border-amber-400/80 ring-8 ring-amber-500/20"
                           />
@@ -610,7 +613,7 @@ export const ChamberView: React.FC = () => {
                     <>
                       <div className="my-auto flex flex-col items-center justify-center">
                         <img
-                          src={activeSpeakerSeat.occupiedBy.userAvatar}
+                          src={activeSpeakerSeat.occupiedBy.videoFrame || activeSpeakerSeat.occupiedBy.userAvatar}
                           alt={activeSpeakerSeat.occupiedBy.userName}
                           className="w-44 h-44 sm:w-56 sm:h-56 rounded-3xl object-cover shadow-2xl border-4 border-amber-400/80 ring-8 ring-amber-500/20"
                         />
@@ -821,17 +824,25 @@ export const ChamberView: React.FC = () => {
                       <div className="space-y-1">
                         <div className="relative mx-auto">
                           <img
-                            src={occupant.userAvatar}
+                            src={occupant.videoFrame || occupant.userAvatar}
                             alt={occupant.userName}
-                            className="w-8 h-8 rounded-full object-cover mx-auto border border-slate-700"
+                            className="w-10 h-10 rounded-xl object-cover mx-auto border-2 border-amber-400/80 shadow-md"
                           />
                           {occupant.isSpeaking && (
-                            <span className="absolute -inset-0.5 rounded-full border-2 border-emerald-400 animate-ping pointer-events-none" />
+                            <span className="absolute -inset-1 rounded-xl border-2 border-emerald-400 animate-ping pointer-events-none" />
+                          )}
+                          {occupant.isVideoOn && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1 ring-slate-900" />
                           )}
                         </div>
-                        <p className="text-[10px] font-semibold text-slate-200 truncate max-w-[65px]">
+                        <p className="text-[10px] font-bold text-slate-100 truncate max-w-[70px]">
                           {occupant.userName.split(' ')[0]}
                         </p>
+                        {occupant.gender && (
+                          <p className="text-[8px] text-slate-400 truncate max-w-[70px]">
+                            {occupant.gender.split(' ')[0]} {occupant.age ? `• ${occupant.age}` : ''}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="my-auto py-1 text-center">

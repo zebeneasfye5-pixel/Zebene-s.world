@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, Seat, ChamberMessage, ChamberInfo, ChamberMemberRegistration, LegalComplianceCertificate } from '../types';
 import { CHAMBERS } from '../data/chambers';
 import { translateText, checkSecurityAndPeace } from '../services/api';
@@ -60,6 +60,8 @@ interface AppContextType {
   toggleVideo: () => void;
   sendMessage: (text: string) => Promise<void>;
   registerUser: (profile: Partial<UserProfile>) => void;
+  signOutUser: () => void;
+  broadcastVoiceAudio: (text: string, language?: string, audioBlobBase64?: string) => void;
   userWallet: {
     balanceBirr: number;
     balanceUsd: number;
@@ -676,6 +678,219 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const seats = seatsByChamber[activeChamberCode] || [];
   const messages = messagesByChamber[activeChamberCode] || [];
 
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Real-Time Multi-User WebSocket Synchronization
+  useEffect(() => {
+    let isMounted = true;
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+
+    const connect = () => {
+      if (!isMounted) return;
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host || 'localhost:3000';
+        const wsUrl = `${protocol}//${host}/ws`;
+
+        socket = new WebSocket(wsUrl);
+        wsRef.current = socket;
+
+        socket.onopen = () => {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(
+              JSON.stringify({
+                type: 'join_chamber',
+                chamberCode: activeChamberCode,
+                userId: currentUser.id,
+                userName: currentUser.fullName,
+              })
+            );
+          }
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'init_state') {
+              if (data.seatsByChamber) {
+                setSeatsByChamber((prev) => ({ ...prev, ...data.seatsByChamber }));
+              }
+              if (data.messagesByChamber) {
+                setMessagesByChamber((prev) => ({ ...prev, ...data.messagesByChamber }));
+              }
+            } else if (data.type === 'chamber_sync') {
+              if (data.seats) {
+                setSeatsByChamber((prev) => ({ ...prev, [data.chamberCode]: data.seats }));
+              }
+              if (data.messages) {
+                setMessagesByChamber((prev) => ({ ...prev, [data.chamberCode]: data.messages }));
+              }
+            } else if (data.type === 'seat_updated') {
+              const { chamberCode, seatNumber, occupiedBy } = data;
+              setSeatsByChamber((prev) => {
+                const currentChamberSeats = [...(prev[chamberCode] || [])];
+                const updated = currentChamberSeats.map((s) =>
+                  s.seatNumber === seatNumber ? { ...s, occupiedBy } : s
+                );
+                if (!updated.some((s) => s.seatNumber === seatNumber)) {
+                  updated.push({ seatNumber, occupiedBy });
+                }
+                return { ...prev, [chamberCode]: updated };
+              });
+            } else if (data.type === 'media_state_changed') {
+              const { chamberCode, seatNumber, isMuted, isVideoOn, isSpeaking } = data;
+              setSeatsByChamber((prev) => {
+                const currentChamberSeats = prev[chamberCode] || [];
+                const updated = currentChamberSeats.map((s) => {
+                  if (s.seatNumber === seatNumber && s.occupiedBy) {
+                    return {
+                      ...s,
+                      occupiedBy: {
+                        ...s.occupiedBy,
+                        isMuted: isMuted ?? s.occupiedBy.isMuted,
+                        isVideoOn: isVideoOn ?? s.occupiedBy.isVideoOn,
+                        isSpeaking: isSpeaking ?? s.occupiedBy.isSpeaking,
+                      },
+                    };
+                  }
+                  return s;
+                });
+                return { ...prev, [chamberCode]: updated };
+              });
+            } else if (data.type === 'remote_video_frame') {
+              const { chamberCode, seatNumber, videoFrame } = data;
+              setSeatsByChamber((prev) => {
+                const currentChamberSeats = prev[chamberCode] || [];
+                const updated = currentChamberSeats.map((s) => {
+                  if (s.seatNumber === seatNumber && s.occupiedBy) {
+                    return {
+                      ...s,
+                      occupiedBy: {
+                        ...s.occupiedBy,
+                        videoFrame,
+                        isVideoOn: true,
+                      },
+                    };
+                  }
+                  return s;
+                });
+                return { ...prev, [chamberCode]: updated };
+              });
+            } else if (data.type === 'remote_audio_speech') {
+              const { chamberCode, seatNumber, userName, text, language, audioBlobBase64 } = data;
+              // Visual speaking indicator pulse
+              setSeatsByChamber((prev) => {
+                const currentChamberSeats = prev[chamberCode] || [];
+                const updated = currentChamberSeats.map((s) => {
+                  if (s.seatNumber === seatNumber && s.occupiedBy) {
+                    return { ...s, occupiedBy: { ...s.occupiedBy, isSpeaking: true } };
+                  }
+                  return s;
+                });
+                return { ...prev, [chamberCode]: updated };
+              });
+
+              setTimeout(() => {
+                setSeatsByChamber((prev) => {
+                  const currentChamberSeats = prev[chamberCode] || [];
+                  const updated = currentChamberSeats.map((s) => {
+                    if (s.seatNumber === seatNumber && s.occupiedBy) {
+                      return { ...s, occupiedBy: { ...s.occupiedBy, isSpeaking: false } };
+                    }
+                    return s;
+                  });
+                  return { ...prev, [chamberCode]: updated };
+                });
+              }, 3000);
+
+              // Audio playback
+              if (audioBlobBase64) {
+                try {
+                  const audio = new Audio(audioBlobBase64);
+                  audio.play().catch((e) => console.log('Audio autoplay:', e));
+                } catch (e) {}
+              } else if (text) {
+                speakText(text, language || userLanguage);
+              }
+            } else if (data.type === 'new_chat_message') {
+              const { chamberCode, message } = data;
+              setMessagesByChamber((prev) => ({
+                ...prev,
+                [chamberCode]: [...(prev[chamberCode] || []), message],
+              }));
+            }
+          } catch (e) {
+            console.error('Error in WS message:', e);
+          }
+        };
+
+        socket.onclose = () => {
+          if (isMounted) {
+            reconnectTimeout = setTimeout(connect, 2500);
+          }
+        };
+      } catch (err) {
+        console.warn('WS connect err:', err);
+      }
+    };
+
+    connect();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (socket) socket.close();
+    };
+  }, [activeChamberCode]);
+
+  // Video Frame Transmission Effect: Broadcast live webcam/camera frames across WebSockets
+  useEffect(() => {
+    if (!isMyVideoOn || !activeCameraStream || myCurrentSeat === null) return;
+
+    const videoEl = document.createElement('video');
+    videoEl.srcObject = activeCameraStream;
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.play().catch(() => {});
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    const ctx = canvas.getContext('2d');
+
+    const intervalId = setInterval(() => {
+      if (
+        wsRef.current &&
+        wsRef.current.readyState === WebSocket.OPEN &&
+        videoEl.readyState >= 2 &&
+        ctx
+      ) {
+        try {
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          wsRef.current.send(
+            JSON.stringify({
+              type: 'video_frame',
+              chamberCode: activeChamberCode,
+              seatNumber: myCurrentSeat,
+              userId: currentUser.id,
+              videoFrame: dataUrl,
+            })
+          );
+        } catch (e) {
+          // ignore capture frame transient
+        }
+      }
+    }, 700);
+
+    return () => {
+      clearInterval(intervalId);
+      videoEl.pause();
+      videoEl.srcObject = null;
+    };
+  }, [isMyVideoOn, activeCameraStream, myCurrentSeat, activeChamberCode, currentUser.id]);
+
   // Key press listener for 1 to 7 quick dialing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -701,6 +916,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (code >= 1 && code <= 7) {
       setActiveChamberCode(code);
       setActiveTab('chamber');
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'join_chamber',
+            chamberCode: code,
+            userId: currentUser.id,
+            userName: currentUser.fullName,
+          })
+        );
+      }
     }
   };
 
@@ -708,35 +933,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const startUserCamera = useCallback(async (): Promise<MediaStream | null> => {
     try {
       setCameraStatus('starting');
-      // High-definition front-facing constraints
       const constraints: MediaStreamConstraints = {
         video: {
           facingMode: cameraFacingMode,
-          width: { ideal: 1920, min: 640 },
-          height: { ideal: 1080, min: 480 },
-          frameRate: { ideal: 30 }
+          width: { ideal: 1280, min: 480 },
+          height: { ideal: 720, min: 360 },
+          frameRate: { ideal: 30 },
         },
-        audio: false
+        audio: false,
       };
 
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (hdErr) {
-        // Fallback to standard video if ideal resolution is refused by simple webcams
+      } catch {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       }
 
       setActiveCameraStream(stream);
       setIsMyVideoOn(true);
       setCameraStatus('active');
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && myCurrentSeat !== null) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'media_state',
+            chamberCode: activeChamberCode,
+            seatNumber: myCurrentSeat,
+            userId: currentUser.id,
+            isVideoOn: true,
+          })
+        );
+      }
+
       return stream;
     } catch (err: any) {
-      console.warn('Camera permission denied or camera device missing:', err);
+      console.warn('Camera permission denied:', err);
       setCameraStatus('denied');
       return null;
     }
-  }, [cameraFacingMode]);
+  }, [cameraFacingMode, myCurrentSeat, activeChamberCode, currentUser.id]);
 
   const stopUserCamera = useCallback(() => {
     if (activeCameraStream) {
@@ -745,7 +981,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setIsMyVideoOn(false);
     setCameraStatus('idle');
-  }, [activeCameraStream]);
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && myCurrentSeat !== null) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'media_state',
+          chamberCode: activeChamberCode,
+          seatNumber: myCurrentSeat,
+          userId: currentUser.id,
+          isVideoOn: false,
+        })
+      );
+    }
+  }, [activeCameraStream, myCurrentSeat, activeChamberCode, currentUser.id]);
 
   const toggleCameraFacingMode = useCallback(() => {
     const nextMode = cameraFacingMode === 'user' ? 'environment' : 'user';
@@ -759,48 +1007,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [cameraFacingMode, isMyVideoOn, startUserCamera, stopUserCamera]);
 
   const claimSeat = (seatNumber: number) => {
+    // If user has not registered / entered their full name, open registration modal
+    if (!currentUser.fullName || !currentUser.isAuthenticated) {
+      setIsRegistrationOpen(true);
+      return;
+    }
+
+    const occupant = {
+      userId: currentUser.id,
+      userName: currentUser.fullName,
+      userNationality: currentUser.nationality,
+      userAvatar: currentUser.photoUrl,
+      gender: currentUser.gender,
+      age: currentUser.age,
+      address: currentUser.address,
+      phoneNumber: currentUser.phoneNumber,
+      isMuted: !isMyMicOn,
+      isVideoOn: isMyVideoOn,
+      isSpeaking: false,
+      language: userLanguage,
+    };
+
     setSeatsByChamber((prev) => {
       const currentChamberSeats = [...(prev[activeChamberCode] || [])];
       const updated = currentChamberSeats.map((seat) => {
-        if (seat.occupiedBy?.userId === currentUser.id) {
+        if (seat.occupiedBy?.userId === currentUser.id && seat.seatNumber !== seatNumber) {
           return { ...seat, occupiedBy: null };
         }
         if (seat.seatNumber === seatNumber) {
-          return {
-            ...seat,
-            occupiedBy: {
-              userId: currentUser.id,
-              userName: currentUser.fullName,
-              userNationality: currentUser.nationality,
-              userAvatar: currentUser.photoUrl,
-              isMuted: !isMyMicOn,
-              isVideoOn: isMyVideoOn,
-              isSpeaking: false,
-              language: userLanguage,
-            },
-          };
+          return { ...seat, occupiedBy: occupant };
         }
         return seat;
       });
       return { ...prev, [activeChamberCode]: updated };
     });
+
     setMyCurrentSeat(seatNumber);
     rewardUserAction('speak');
+
+    // Sync across WebSocket to ALL users in real time!
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'claim_seat',
+          chamberCode: activeChamberCode,
+          seatNumber,
+          occupant,
+        })
+      );
+    }
   };
 
   const leaveSeat = () => {
     if (myCurrentSeat === null) return;
+    const seatNum = myCurrentSeat;
+
     setSeatsByChamber((prev) => {
       const currentChamberSeats = [...(prev[activeChamberCode] || [])];
       const updated = currentChamberSeats.map((seat) => {
-        if (seat.seatNumber === myCurrentSeat) {
+        if (seat.seatNumber === seatNum) {
           return { ...seat, occupiedBy: null };
         }
         return seat;
       });
       return { ...prev, [activeChamberCode]: updated };
     });
+
     setMyCurrentSeat(null);
+
+    // Sync across WebSocket to ALL users in real time!
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'leave_seat',
+          chamberCode: activeChamberCode,
+          seatNumber: seatNum,
+          userId: currentUser.id,
+        })
+      );
+    }
   };
 
   const toggleMic = () => {
@@ -815,6 +1100,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               : s
           ),
         }));
+
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: 'media_state',
+              chamberCode: activeChamberCode,
+              seatNumber: myCurrentSeat,
+              userId: currentUser.id,
+              isMuted: !next,
+              isSpeaking: next,
+            })
+          );
+        }
       }
       return next;
     });
@@ -825,6 +1123,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       stopUserCamera();
     } else {
       startUserCamera();
+    }
+  };
+
+  // Broadcast Audio Voice Speech to All Other Connected Users
+  const broadcastVoiceAudio = (text: string, language?: string, audioBlobBase64?: string) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'audio_speech',
+          chamberCode: activeChamberCode,
+          seatNumber: myCurrentSeat,
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          text,
+          language: language || userLanguage,
+          audioBlobBase64,
+        })
+      );
     }
   };
 
@@ -1043,10 +1359,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const signOutUser = () => {
+    if (myCurrentSeat !== null) {
+      leaveSeat();
+    }
+    stopUserCamera();
+    setIsMyMicOn(false);
+
+    const guestUser: UserProfile = {
+      id: `usr-${Date.now()}`,
+      fullName: '',
+      gender: 'ወንድ (Male)',
+      age: 28,
+      address: '',
+      nationality: 'Ethiopia 🇪🇹',
+      phoneNumber: '',
+      photoUrl: '',
+      faceVerified: false,
+      role: 'citizen',
+      preferredLanguage: userLanguage,
+      joinedAt: new Date().toISOString().split('T')[0],
+      balanceBirr: 0,
+      balanceUsd: 0,
+      reputationPoints: 0,
+      isAuthenticated: false,
+    };
+
+    setCurrentUser(guestUser);
+    localStorage.removeItem('zw_user_profile');
+    setIsRegistrationOpen(true);
+  };
+
   const registerUser = (profile: Partial<UserProfile>) => {
-    const updated = { ...currentUser, ...profile, faceVerified: true };
+    const updated: UserProfile = {
+      ...currentUser,
+      ...profile,
+      faceVerified: true,
+      isAuthenticated: true,
+    };
     setCurrentUser(updated);
     localStorage.setItem('zw_user_profile', JSON.stringify(updated));
+
     setFounderVaultStats((prev) => {
       const next = {
         ...prev,
@@ -1055,6 +1408,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('zw_founder_vault_stats', JSON.stringify(next));
       return next;
     });
+
+    // If currently sitting on a chair, sync the newly uploaded photo to the chair immediately!
+    if (myCurrentSeat !== null) {
+      claimSeat(myCurrentSeat);
+    }
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'user_profile_updated',
+          user: updated,
+        })
+      );
+    }
   };
 
   const unlockFounderVault = (pass: string): boolean => {
@@ -1203,6 +1570,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleVideo,
         sendMessage,
         registerUser,
+        signOutUser,
+        broadcastVoiceAudio,
         userWallet,
         founderVault: {
           isUnlocked: founderVaultUnlocked,

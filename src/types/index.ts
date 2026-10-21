@@ -3,8 +3,11 @@ export type Language = 'en' | 'am' | 'om' | 'ti' | 'so' | 'ar' | 'fr' | 'es' | '
 export interface UserProfile {
   id: string;
   fullName: string;
-  nationality: string;
+  gender?: string; // 'ወንድ (Male)' | 'ሴት (Female)'
+  age?: number | string;
   phoneNumber: string;
+  address?: string; // Address / City / Country
+  nationality: string;
   photoUrl: string;
   faceVerified: boolean;
   role: 'citizen' | 'elder' | 'statesman' | 'peacekeeper' | 'founder';
@@ -13,6 +16,7 @@ export interface UserProfile {
   balanceBirr: number;
   balanceUsd: number;
   reputationPoints: number;
+  isAuthenticated?: boolean;
 }
 
 export interface ChamberInfo {
@@ -35,10 +39,14 @@ export interface Seat {
     userName: string;
     userNationality: string;
     userAvatar: string;
+    gender?: string;
+    age?: number | string;
+    address?: string;
     isMuted: boolean;
     isVideoOn: boolean;
     isSpeaking: boolean;
     language: string;
+    videoFrame?: string; // Live camera broadcast frame (base64 image)
   } | null;
 }
 

@@ -24,6 +24,8 @@ import {
   FileCheck,
   FolderOpen,
   Key,
+  LogOut,
+  LogIn,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -53,6 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     autoSpeechEnabled,
     setAutoSpeechEnabled,
     setIsRegistrationOpen,
+    signOutUser,
     effectiveOnline,
     toggleSimulateOffline,
     legalCertificate,
@@ -218,23 +221,44 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{userWallet.balanceBirr.toLocaleString()} ETB</span>
             </button>
 
-            {/* Profile / Biometric Face ID Verified */}
-            <button
-              onClick={() => setIsRegistrationOpen(true)}
-              className="flex items-center space-x-2 p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition-colors"
-              title="Identity & Face Biometric Verification"
-            >
-              <div className="relative">
-                <img
-                  src={currentUser.photoUrl}
-                  alt={currentUser.fullName}
-                  className="w-6 h-6 rounded-full object-cover border border-amber-400"
-                />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-slate-900" />
+            {/* Profile & Sign In / Sign Out */}
+            {currentUser?.fullName && currentUser?.isAuthenticated !== false ? (
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() => setIsRegistrationOpen(true)}
+                  className="flex items-center space-x-1.5 p-1 sm:px-2.5 sm:py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+                  title="የአባልነት መረጃ እና ፎቶ ማስተካከያ (Profile & Photo)"
+                >
+                  <div className="relative">
+                    <img
+                      src={currentUser.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                      alt={currentUser.fullName}
+                      className="w-6 h-6 rounded-full object-cover border border-amber-400"
+                    />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-slate-900" />
+                  </div>
+                  <span className="hidden md:inline font-semibold">{currentUser.fullName.split(' ')[0]}</span>
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-400 hidden sm:inline" />
+                </button>
+
+                <button
+                  onClick={signOutUser}
+                  title="ከአካውንት ውጣ / ሳይን አውት (Sign Out)"
+                  className="flex items-center space-x-1 px-2.5 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-white border border-rose-500/40 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline">ሳይን አውት</span>
+                </button>
               </div>
-              <span className="hidden md:inline font-semibold">{currentUser.fullName.split(' ')[0]}</span>
-              <UserCheck className="w-3.5 h-3.5 text-emerald-400 hidden sm:inline" />
-            </button>
+            ) : (
+              <button
+                onClick={() => setIsRegistrationOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white rounded-lg text-xs font-bold shadow-md shadow-amber-500/20 transition-transform active:scale-95 cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>ግባ / ተመዝገብ (Sign In)</span>
+              </button>
+            )}
 
             {/* Play Store / PWA Install Prompt Button */}
             <button
@@ -447,15 +471,38 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
             <span className="text-xs text-slate-400">Wallet: {userWallet.balanceBirr} ETB</span>
-            <button
-              onClick={() => {
-                setIsRegistrationOpen(true);
-                setMobileMenuOpen(false);
-              }}
-              className="text-xs text-amber-400 font-semibold"
-            >
-              Verify Face Biometric
-            </button>
+            {currentUser?.fullName && currentUser?.isAuthenticated !== false ? (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setIsRegistrationOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-xs text-amber-400 font-semibold truncate max-w-[120px]"
+                >
+                  {currentUser.fullName}
+                </button>
+                <button
+                  onClick={() => {
+                    signOutUser();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="px-2 py-1 bg-rose-500/20 text-rose-300 rounded text-[11px] font-bold"
+                >
+                  ሳይን አውት
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsRegistrationOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="px-2.5 py-1 bg-amber-500 text-slate-950 rounded text-xs font-bold"
+              >
+                ግባ / ተመዝገብ
+              </button>
+            )}
           </div>
 
           <div className="pt-2 border-t border-slate-800 space-y-2">

@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { speakText, stopSpeaking, initSpeechRecognition, playChimeTone } from '../services/speech';
+import {
+  speakText,
+  stopSpeaking,
+  initSpeechRecognition,
+  playChimeTone,
+  getListenActivationAnnouncement,
+} from '../services/speech';
 import { translateText } from '../services/api';
 import { offlineTranslate } from '../data/offlineData';
 import {
@@ -18,6 +24,7 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  Activity,
 } from 'lucide-react';
 import assemblyHeroImg from '../assets/images/global_assembly_hall.jpg';
 
@@ -51,6 +58,7 @@ export const GlobalAssemblyHero: React.FC = () => {
     currentUser,
     broadcastVoiceAudio,
     userLanguage,
+    messages,
   } = useApp();
 
   // Interpretation state
@@ -58,8 +66,10 @@ export const GlobalAssemblyHero: React.FC = () => {
   const [listenerLang, setListenerLang] = useState<string>('en');
   const [isSpeakingListening, setIsSpeakingListening] = useState<boolean>(false);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
-  const [autoHearEnabled, setAutoHearEnabled] = useState<boolean>(true);
+
+  // UNLIMITED CONTINUOUS LIVE LISTENING CHANNEL (ገደብ የለሽ የቀጥታ ማዳመጫ ቻናል)
+  const [isUnlimitedListening, setIsUnlimitedListening] = useState<boolean>(false);
+  const [isVoiceOutputActive, setIsVoiceOutputActive] = useState<boolean>(false);
   const [inputText, setInputText] = useState<string>('');
   const [lastTranslatedText, setLastTranslatedText] = useState<string>(
     'Welcome to the Universal Assembly of Sovereign Peoples! (እንኳን ወደ አለም አቀፍ የሉዓላዊ ህዝቦች ጉባኤ በደህና መጡ!)'
@@ -78,6 +88,32 @@ export const GlobalAssemblyHero: React.FC = () => {
   ]);
 
   const [isHeroExpanded, setIsHeroExpanded] = useState<boolean>(true);
+
+  // Audio keep-alive heartbeat while Unlimited Listening Mode is active
+  useEffect(() => {
+    if (!isUnlimitedListening) return;
+
+    // Periodic heartbeat to prevent browser audio context from sleeping
+    const heartbeatInterval = setInterval(() => {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.setValueAtTime(50, ctx.currentTime);
+        gain.gain.setValueAtTime(0.001, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } catch (e) {}
+    }, 10000);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+    };
+  }, [isUnlimitedListening]);
 
   // Speech recognition handler for "ለመናገር" button
   const handleStartSpeaking = () => {
@@ -145,7 +181,7 @@ export const GlobalAssemblyHero: React.FC = () => {
       sourceText: textToTranslate,
       targetLang: tgtLangCode,
       translatedText: result,
-      wasSpokenOut: autoHearEnabled,
+      wasSpokenOut: isUnlimitedListening,
     };
 
     setInterpretationLogs((prev) => [newLog, ...prev.slice(0, 5)]);
@@ -158,27 +194,62 @@ export const GlobalAssemblyHero: React.FC = () => {
       // fallback
     }
 
-    // Auto-hear playback if enabled
-    if (autoHearEnabled) {
-      triggerHearPlayback(result, tgtLangCode);
+    // If Unlimited Listening Channel is ACTIVE, speak the translated speech immediately into user's headphones!
+    if (isUnlimitedListening) {
+      playChimeTone(660, 90);
+      speakText(
+        result,
+        tgtLangCode,
+        () => setIsVoiceOutputActive(true),
+        () => setIsVoiceOutputActive(false)
+      );
     }
   };
 
-  // Hear playback button handler for "ለመስማት"
-  const triggerHearPlayback = (text: string, langCode: string) => {
-    if (isAudioPlaying) {
+  // UNLIMITED CONTINUOUS LIVE LISTENING TOGGLE (ገደብ የለሽ የቀጥታ ማዳመጫ)
+  const toggleUnlimitedListening = () => {
+    if (isUnlimitedListening) {
+      // User explicitly stopped listening
+      setIsUnlimitedListening(false);
+      setIsVoiceOutputActive(false);
       stopSpeaking();
-      setIsAudioPlaying(false);
-      return;
-    }
+    } else {
+      // User turned on Unlimited Continuous Live Listening
+      setIsUnlimitedListening(true);
+      playChimeTone(784, 150);
 
-    setIsAudioPlaying(true);
+      // Instantly speak verbal activation announcement in listener's language
+      const announcement = getListenActivationAnnouncement(listenerLang);
+      speakText(
+        announcement,
+        listenerLang,
+        () => setIsVoiceOutputActive(true),
+        () => {
+          setIsVoiceOutputActive(false);
+          // If a translated text is currently ready, play it right after
+          if (lastTranslatedText && lastTranslatedText.trim()) {
+            setTimeout(() => {
+              speakText(
+                lastTranslatedText,
+                listenerLang,
+                () => setIsVoiceOutputActive(true),
+                () => setIsVoiceOutputActive(false)
+              );
+            }, 300);
+          }
+        }
+      );
+    }
+  };
+
+  // Hear playback button handler for re-playing the current translation on demand
+  const triggerSinglePlayback = (text: string, langCode: string) => {
     playChimeTone(660, 100);
     speakText(
       text,
       langCode,
-      () => setIsAudioPlaying(true),
-      () => setIsAudioPlaying(false)
+      () => setIsVoiceOutputActive(true),
+      () => setIsVoiceOutputActive(false)
     );
   };
 
@@ -371,7 +442,7 @@ export const GlobalAssemblyHero: React.FC = () => {
               </div>
 
               {/* Translation Output Box */}
-              <div className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 min-h-[46px] flex items-center justify-between">
+              <div className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 min-h-[50px] flex items-center justify-between">
                 <div className="text-xs text-emerald-300 font-medium truncate pr-2">
                   {isTranslating ? (
                     <span className="text-amber-400 flex items-center gap-1.5 animate-pulse">
@@ -384,42 +455,78 @@ export const GlobalAssemblyHero: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  <label className="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer mr-1">
-                    <Headphones className="w-3 h-3 text-emerald-400" />
-                    <span>Auto-Hear</span>
-                    <input
-                      type="checkbox"
-                      checked={autoHearEnabled}
-                      onChange={(e) => setAutoHearEnabled(e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0"
-                    />
-                  </label>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+                    isUnlimitedListening ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    <Radio className={`w-3 h-3 ${isUnlimitedListening ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}`} />
+                    <span>{isUnlimitedListening ? 'Live 24/7' : 'Standby'}</span>
+                  </span>
                 </div>
               </div>
 
-              {/* Action Button: HEAR PLAYBACK */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => triggerHearPlayback(lastTranslatedText, listenerLang)}
-                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    isAudioPlaying
-                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 animate-pulse'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
-                  }`}
-                >
-                  {isAudioPlaying ? (
-                    <>
-                      <VolumeX className="w-4 h-4" />
-                      <span>ድምፁ እየተሰማ ነው... (Playing Audio)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="w-4 h-4" />
-                      <span>ለመስማት ተጫን (Hear Audio Playback)</span>
-                    </>
-                  )}
-                </button>
+              {/* UNLIMITED CONTINUOUS LIVE LISTENING CONTROLS (ገደብ የለሽ የቀጥታ ማዳመጫ) */}
+              <div className="space-y-2">
+                {isUnlimitedListening ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={toggleUnlimitedListening}
+                      className="w-full py-3 px-4 rounded-xl font-black text-xs flex items-center justify-between bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl shadow-emerald-500/30 border-2 border-emerald-300 ring-2 ring-emerald-400/40 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
+                        </span>
+                        <div className="text-left">
+                          <span className="block font-black text-xs uppercase tracking-wide">
+                            🟢 ገደብ የለሽ ማዳመጫ ነቅቷል (ማዳመጥ አቁም)
+                          </span>
+                          <span className="block text-[10px] text-emerald-100 font-semibold">
+                            {isVoiceOutputActive ? 'ድምፅ እየተናገረ ነው... (Speaking Live)' : 'ያለገደብ ክፍት ነው • Unlimited Live Stream Active'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Animated Live Audio Equalizer Waveform */}
+                      <div className="flex items-center gap-1 bg-black/40 px-2.5 py-1.5 rounded-lg border border-white/20">
+                        {[14, 26, 18, 30, 22, 28, 16].map((h, i) => (
+                          <span
+                            key={i}
+                            className={`w-1 rounded-full ${
+                              isVoiceOutputActive ? 'bg-amber-300 animate-bounce' : 'bg-emerald-300 animate-pulse'
+                            }`}
+                            style={{ height: `${h}px`, animationDuration: `${0.35 + (i % 3) * 0.15}s` }}
+                          />
+                        ))}
+                      </div>
+                    </button>
+
+                    {/* Sub-bar: Status and Replay */}
+                    <div className="flex items-center justify-between text-[11px] bg-slate-900 border border-emerald-500/30 rounded-xl px-3 py-1.5 text-emerald-300">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                        <span>ያለጊዜ ገደብ ቀጣይነት ያለው የቀጥታ ድምፅ ክፍት ነው</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => triggerSinglePlayback(lastTranslatedText, listenerLang)}
+                        className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-emerald-200 text-[10px] font-bold border border-emerald-500/40 cursor-pointer"
+                      >
+                        ድጋሚ አሰማ (Re-Play)
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={toggleUnlimitedListening}
+                    className="w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg border border-emerald-400/40 transition-all cursor-pointer hover:scale-[1.01]"
+                  >
+                    <Volume2 className="w-4 h-4 text-emerald-200" />
+                    <span>ለመስማት ተጫን • ገደብ የለሽ የቀጥታ ማዳመጫ ክፈት (Start Unlimited Live Hearing)</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

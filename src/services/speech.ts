@@ -18,6 +18,25 @@ export function getAvailableVoices(): SpeechSynthesisVoice[] {
   return window.speechSynthesis.getVoices();
 }
 
+// Retain utterances in a top-level array to prevent Chromium from garbage collecting them mid-speech
+const activeUtterances: SpeechSynthesisUtterance[] = [];
+if (typeof window !== 'undefined') {
+  (window as any).__activeUtterances = activeUtterances;
+}
+
+// Keep-alive timer to prevent Chrome from pausing speech synthesis after ~15s
+let keepAliveTimer: any = null;
+function ensureKeepAlive() {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  if (keepAliveTimer) return;
+  keepAliveTimer = setInterval(() => {
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    }
+  }, 7000);
+}
+
 export function playChimeTone(freq = 660, durationMs = 150) {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -27,7 +46,7 @@ export function playChimeTone(freq = 660, durationMs = 150) {
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -35,6 +54,31 @@ export function playChimeTone(freq = 660, durationMs = 150) {
     osc.stop(ctx.currentTime + durationMs / 1000);
   } catch (e) {
     // ignore audio context restrictions
+  }
+}
+
+// Multilingual greeting announcement when user enables Unlimited Continuous Live Listening Channel
+export function getListenActivationAnnouncement(langCode: string = 'am'): string {
+  switch (langCode) {
+    case 'am':
+      return 'የቀጥታ ማዳመጫ ቻናል ነቅቷል፤ የሚነገሩ ማናቸውም ንግግሮች ያለገደብ በቀጥታ ይተረጎማሉ።';
+    case 'om':
+      return 'Sararri dhaggeeffannaa kallattii banameera; jechoonni dubbataman hundi daangaa malee kallattiin hiikamu.';
+    case 'ti':
+      return 'ናይ ቀጥታ ምስማዕ መስመር ተኸፊቱ ኣሎ፤ ዝኾነ ዝዝረብ ዘረባ ብዘይ ገደብ ብቐጥታ ክትርጎም እዩ።';
+    case 'ar':
+      return 'تم تفعيل قناة الترجمة المباشرة المستمرة بدون انقطاع.';
+    case 'fr':
+      return 'Le canal d\'interprétation simultanée continue est maintenant actif sans limite de temps.';
+    case 'es':
+      return 'El canal de traducción simultánea continua en vivo está activado sin límite de tiempo.';
+    case 'zh':
+      return '无限制实时同声传译收听频道现已开启。';
+    case 'sw':
+      return 'Kituo cha utafsiri wa moja kwa moja kiko hewani bila kikomo.';
+    case 'en':
+    default:
+      return 'Unlimited continuous live translation channel is active. You will hear all speeches live without limit.';
   }
 }
 
@@ -48,10 +92,12 @@ export function speakText(
   if (!text || !text.trim()) return false;
 
   try {
+    ensureKeepAlive();
+    // Do not cancel aggressively if already speaking same text
     window.speechSynthesis.cancel();
 
     // Play subtle high-clarity notification chime
-    playChimeTone(587, 120);
+    playChimeTone(587, 100);
 
     const utterance = new SpeechSynthesisUtterance(text);
     const targetLocales = langMap[languageCode] || [languageCode, 'en-US'];
@@ -71,11 +117,30 @@ export function speakText(
     utterance.rate = 0.95; // Slightly slower for international clarity
     utterance.pitch = 1.0;
 
-    if (onStart) utterance.onstart = onStart;
-    if (onEnd) {
-      utterance.onend = onEnd;
-      utterance.onerror = () => onEnd();
-    }
+    // Retain utterance in global array to prevent Chrome GC bug
+    activeUtterances.push(utterance);
+
+    const cleanup = () => {
+      const idx = activeUtterances.indexOf(utterance);
+      if (idx !== -1) {
+        activeUtterances.splice(idx, 1);
+      }
+    };
+
+    utterance.onstart = () => {
+      if (onStart) onStart();
+    };
+
+    utterance.onend = () => {
+      cleanup();
+      if (onEnd) onEnd();
+    };
+
+    utterance.onerror = (e) => {
+      console.warn('SpeechSynthesis error event:', e);
+      cleanup();
+      if (onEnd) onEnd();
+    };
 
     window.speechSynthesis.speak(utterance);
     return true;
@@ -86,9 +151,17 @@ export function speakText(
   }
 }
 
+export function isSpeechSpeaking(): boolean {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
+  return window.speechSynthesis.speaking;
+}
+
 export function stopSpeaking() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
+    try {
+      window.speechSynthesis.cancel();
+      activeUtterances.length = 0;
+    } catch (e) {}
   }
 }
 

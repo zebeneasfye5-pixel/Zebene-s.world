@@ -166,7 +166,50 @@ export interface LegalArticle {
   icon: string;
 }
 
-export type PlatformTab = 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya';
+export type PlatformTab = 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya' | 'admin';
+
+export interface NuptialParticipant {
+  role: 'groom' | 'bride' | 'best_man' | 'maid_of_honor' | 'presiding_elder' | 'legal_witness' | 'honored_guest';
+  fullName: string;
+  amharicRole: string;
+  nationality: string;
+  phoneNumber?: string;
+  idPassportNumber?: string;
+  photoUrl?: string;
+  signature?: string;
+  isSigned: boolean;
+  signedAt?: string;
+}
+
+export interface NuptialWeddingRecord {
+  covenantId: string;
+  registryNumber: string;
+  hagueApostilleCode: string;
+  solemnizationDate: string;
+  propertyRegime: 'community_of_property' | 'separate_estate' | 'customary_harmonized';
+  groom: NuptialParticipant;
+  bride: NuptialParticipant;
+  bestMan: NuptialParticipant;
+  maidOfHonor: NuptialParticipant;
+  elders: NuptialParticipant[];
+  witnesses: NuptialParticipant[];
+  guestsCount: number;
+  totalGiftsBirr: number;
+  treatyComplianceNotes: string[];
+  isLegallyCertified: boolean;
+  qrVerificationUrl: string;
+}
+
+export interface InvitedContact {
+  id: string;
+  name: string;
+  phoneNumber?: string;
+  email?: string;
+  channel: 'whatsapp' | 'telegram' | 'sms' | 'email' | 'phone_contacts';
+  status: 'sent' | 'pending';
+  invitedAt: string;
+}
+
 
 
 

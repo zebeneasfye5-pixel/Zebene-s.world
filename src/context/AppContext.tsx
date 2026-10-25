@@ -1,5 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { UserProfile, Seat, ChamberMessage, ChamberInfo, ChamberMemberRegistration, LegalComplianceCertificate } from '../types';
+import {
+  UserProfile,
+  Seat,
+  ChamberMessage,
+  ChamberInfo,
+  ChamberMemberRegistration,
+  LegalComplianceCertificate,
+  PlatformTab,
+  NuptialWeddingRecord,
+  InvitedContact,
+} from '../types';
 import { CHAMBERS } from '../data/chambers';
 import { translateText, checkSecurityAndPeace } from '../services/api';
 import { speakText } from '../services/speech';
@@ -34,8 +44,8 @@ interface AppContextType {
   chambers: ChamberInfo[];
   activeChamberCode: number;
   activeChamber: ChamberInfo;
-  activeTab: 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya';
-  setActiveTab: (tab: 'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya') => void;
+  activeTab: PlatformTab;
+  setActiveTab: (tab: PlatformTab) => void;
   legalCertificate: LegalComplianceCertificate | null;
   acceptLegalCompact: () => LegalComplianceCertificate;
   isLegalModalOpen: boolean;
@@ -116,6 +126,28 @@ interface AppContextType {
   isSimulatedOffline: boolean;
   effectiveOnline: boolean;
   toggleSimulateOffline: () => void;
+
+  // Modern Invitation & Embed Widget Controls
+  isInviteModalOpen: boolean;
+  setIsInviteModalOpen: (open: boolean) => void;
+  isEmbedModalOpen: boolean;
+  setIsEmbedModalOpen: (open: boolean) => void;
+
+  // Nuptial Records & Registry
+  nuptialRecords: NuptialWeddingRecord[];
+  saveNuptialRecord: (record: NuptialWeddingRecord) => void;
+
+  // Invited Contacts
+  invitedContacts: InvitedContact[];
+  addInvitedContact: (contact: InvitedContact) => void;
+
+  // Executive Admin & Chamber Controls
+  chambersLocked: Record<number, boolean>;
+  adminToggleChamberLock: (chamberCode: number) => void;
+  adminBroadcastDecree: (decreeText: string) => Promise<void>;
+  adminResetChamberSeats: (chamberCode: number) => void;
+  adminAddVerifiedMember: (member: Partial<UserProfile>) => void;
+  allRegisteredMembers: UserProfile[];
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -329,13 +361,183 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeChamberCode, setActiveChamberCode] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'chamber' | 'learning' | 'games_lottery' | 'charity' | 'banking_economy' | 'governance' | 'legal_compliance' | 'tikil_2rya'>('chamber');
+  const [activeTab, setActiveTab] = useState<PlatformTab>('chamber');
   const [userLanguage, setUserLanguage] = useState<string>('en');
   const [autoTranslateEnabled, setAutoTranslateEnabled] = useState<boolean>(true);
   const [autoSpeechEnabled, setAutoSpeechEnabled] = useState<boolean>(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState<boolean>(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState<boolean>(false);
   const [isTikil2ryaModalOpen, setIsTikil2ryaModalOpen] = useState<boolean>(false);
+
+  // Modern Invitation & Embed Widget Controls
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
+  const [isEmbedModalOpen, setIsEmbedModalOpen] = useState<boolean>(false);
+
+  // Executive Admin & Chamber Lock Controls
+  const [chambersLocked, setChambersLocked] = useState<Record<number, boolean>>({});
+
+  // Nuptial & Matrimonial Records (Chamber #5)
+  const [nuptialRecords, setNuptialRecords] = useState<NuptialWeddingRecord[]>(() => {
+    const saved = localStorage.getItem('zw_nuptial_records');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return [
+      {
+        covenantId: 'cov-seed-1',
+        registryNumber: 'ZW-HAGUE-2026-99824',
+        hagueApostilleCode: 'HAGUE-APOSTILLE-2026-001-A9B',
+        solemnizationDate: '2026-10-18',
+        propertyRegime: 'community_of_property',
+        groom: {
+          role: 'groom',
+          fullName: 'ዳዊት ኃይሉ (Dawit Hailu)',
+          amharicRole: 'ሙሽራው',
+          nationality: 'Ethiopia 🇪🇹',
+          idPassportNumber: 'ET-PASS-99120',
+          isSigned: true,
+        },
+        bride: {
+          role: 'bride',
+          fullName: 'ሰብለወንጌል ተፈራ (Seblewongel Teferra)',
+          amharicRole: 'ሙሽሪት',
+          nationality: 'Ethiopia 🇪🇹',
+          idPassportNumber: 'ET-PASS-88419',
+          isSigned: true,
+        },
+        bestMan: {
+          role: 'best_man',
+          fullName: 'ኤርሚያስ ከበደ (Ermias Kebede)',
+          amharicRole: 'ዋና ሚዜ',
+          nationality: 'Ethiopia 🇪🇹',
+          isSigned: true,
+        },
+        maidOfHonor: {
+          role: 'maid_of_honor',
+          fullName: 'ትዕግስት በቀለ (Tigist Bekele)',
+          amharicRole: 'የሙሽሪት ሚዜ',
+          nationality: 'Ethiopia 🇪🇹',
+          isSigned: true,
+        },
+        elders: [
+          {
+            role: 'presiding_elder',
+            fullName: 'አቶ ገብርኤል ወልዴ (Elder Gabriel Wolde)',
+            amharicRole: 'አጋቢ ሽማግሌ',
+            nationality: 'Ethiopia 🇪🇹',
+            isSigned: true,
+          },
+        ],
+        witnesses: [
+          {
+            role: 'legal_witness',
+            fullName: 'ዶ/ር አሚና ዲያሎ (Dr. Amina Diallo)',
+            amharicRole: 'ዋና ምስክር',
+            nationality: 'Senegal 🇸🇳',
+            isSigned: true,
+          },
+        ],
+        guestsCount: 142,
+        totalGiftsBirr: 45000,
+        treatyComplianceNotes: [
+          'Hague Apostille Convention 1961 Verified',
+          'UN Marriage Treaty 1962 Compliant',
+        ],
+        isLegallyCertified: true,
+        qrVerificationUrl: 'https://zebenesworld.org/verify/nuptial/ZW-HAGUE-2026-99824',
+      },
+    ];
+  });
+
+  // Invited Contacts Registry
+  const [invitedContacts, setInvitedContacts] = useState<InvitedContact[]>(() => {
+    const saved = localStorage.getItem('zw_invited_contacts');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return [
+      {
+        id: 'inv-seed-1',
+        name: 'Ambassador Hailemariam',
+        phoneNumber: '+251 91 144 5566',
+        channel: 'whatsapp',
+        status: 'sent',
+        invitedAt: '2026-10-20',
+      },
+      {
+        id: 'inv-seed-2',
+        name: 'Sara Kifle (Diaspora Council)',
+        email: 'sara.kifle@global.org',
+        channel: 'email',
+        status: 'sent',
+        invitedAt: '2026-10-21',
+      },
+    ];
+  });
+
+  // All Registered Members for Governance Directory
+  const [allRegisteredMembers, setAllRegisteredMembers] = useState<UserProfile[]>(() => {
+    const saved = localStorage.getItem('zw_all_registered_members');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return [
+      {
+        id: 'usr-zebene',
+        fullName: 'ክቡር ዘበነ አስፍዬ (Zebene Asfeye - Founder)',
+        gender: 'ወንድ (Male)',
+        age: 38,
+        phoneNumber: '+251 91 100 2026',
+        address: 'አዲስ አበባ፣ ኢትዮጵያ (Addis Ababa)',
+        nationality: 'Ethiopia 🇪🇹',
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        faceVerified: true,
+        role: 'founder',
+        preferredLanguage: 'am',
+        joinedAt: '2026-01-01',
+        balanceBirr: 875000,
+        balanceUsd: 15900,
+        reputationPoints: 9999,
+        isAuthenticated: true,
+      },
+      {
+        id: 'usr-amina',
+        fullName: 'Dr. Amina Diallo',
+        gender: 'ሴት (Female)',
+        age: 34,
+        phoneNumber: '+221 77 123 4567',
+        address: 'Dakar, Senegal',
+        nationality: 'Senegal 🇸🇳',
+        photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+        faceVerified: true,
+        role: 'elder',
+        preferredLanguage: 'fr',
+        joinedAt: '2026-01-12',
+        balanceBirr: 5400,
+        balanceUsd: 98,
+        reputationPoints: 480,
+        isAuthenticated: true,
+      },
+      {
+        id: 'usr-marcus',
+        fullName: 'Marcus Chen',
+        gender: 'ወንድ (Male)',
+        age: 31,
+        phoneNumber: '+65 9123 4567',
+        address: 'Singapore Central',
+        nationality: 'Singapore 🇸🇬',
+        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        faceVerified: true,
+        role: 'statesman',
+        preferredLanguage: 'en',
+        joinedAt: '2026-01-14',
+        balanceBirr: 8900,
+        balanceUsd: 161,
+        reputationPoints: 620,
+        isAuthenticated: true,
+      },
+    ];
+  });
 
   // International Legal Compliance Certificate (Persisted in localStorage)
   const [legalCertificate, setLegalCertificate] = useState<LegalComplianceCertificate | null>(() => {
@@ -394,37 +596,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Per-Chamber Member Registrations (Saved in local storage)
+  // Helper to generate universal registrations for all 7 chambers once registered
+  const buildUniversalChamberRegs = (user: UserProfile): Record<number, ChamberMemberRegistration> => {
+    const roles: Record<number, string> = {
+      1: 'General Citizen Assembly Delegate',
+      2: 'Clan Lineage Chronicler & Family Chronicler',
+      3: 'Diplomatic Policy & Sovereign Envoy',
+      4: 'Confidential Matrimony Aspirant',
+      5: 'Honored Nuptial Witness & Guest',
+      6: 'Interfaith Fellowship Guide',
+      7: 'Civil Peacekeeper Monitor',
+    };
+    const res: Record<number, ChamberMemberRegistration> = {};
+    for (let c = 1; c <= 7; c++) {
+      res[c] = {
+        badgeId: `ZW-CH${c}-${user.id ? user.id.toUpperCase().slice(-4) : '9821'}`,
+        chamberCode: c,
+        userId: user.id || 'usr-101',
+        fullName: user.fullName || 'Global Citizen',
+        nationality: user.nationality || 'Ethiopia 🇪🇹',
+        photoUrl: user.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        registeredRole: roles[c] || 'Accredited Member',
+        chamberSpecificData: {
+          enrollment: 'Universal Single Registration (አንዴ የተመዘገበ ሁለንተናዊ አባል)',
+          verification: 'Official Digital Badge Active',
+        },
+        registrationDate: user.joinedAt || '2026-01-15',
+        isVerified: true,
+      };
+    }
+    return res;
+  };
+
+  // Per-Chamber Member Registrations: Automatically accredited across ALL 7 chambers
   const [chamberRegistrations, setChamberRegistrations] = useState<Record<number, ChamberMemberRegistration | null>>(() => {
     const saved = localStorage.getItem('zw_chamber_registrations');
     if (saved) {
-      try { return JSON.parse(saved); } catch {}
+      try {
+        const parsed = JSON.parse(saved);
+        // Ensure all 7 chambers are filled
+        const filled = { ...buildUniversalChamberRegs(currentUser), ...parsed };
+        return filled;
+      } catch {}
     }
-    // Automatically register user in House 1 by default so they can explore immediately
-    return {
-      1: {
-        badgeId: 'CH1-DELEGATE-9821',
-        chamberCode: 1,
-        userId: 'usr-101',
-        fullName: 'Global Citizen',
-        nationality: 'Ethiopia 🇪🇹',
-        photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-        registeredRole: 'General Citizen Assembly Delegate',
-        chamberSpecificData: {
-          delegationField: 'Technology, Science & Global Progress',
-          representation: 'Citizen Sovereign Assembly',
-          speakingMandate: 'Civilized Discourse & Universal Brotherhood'
-        },
-        registrationDate: '2026-10-09',
-        isVerified: true
-      },
-      2: null,
-      3: null,
-      4: null,
-      5: null,
-      6: null,
-      7: null
-    };
+    return buildUniversalChamberRegs(currentUser);
   });
 
   const [chamberMembersRegistry, setChamberMembersRegistry] = useState<Record<number, ChamberMemberRegistration[]>>(() => {

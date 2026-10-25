@@ -25,6 +25,8 @@ import {
   ChevronDown,
   ChevronUp,
   Activity,
+  Compass,
+  Sparkles,
 } from 'lucide-react';
 import assemblyHeroImg from '../assets/images/global_assembly_hall.jpg';
 
@@ -39,6 +41,11 @@ export interface InterpretationLog {
   wasSpokenOut: boolean;
 }
 
+interface GlobalAssemblyHeroProps {
+  onOpenMasterDashboard?: () => void;
+  onOpenAuthGate?: () => void;
+}
+
 const SUPPORTED_LANGUAGES = [
   { code: 'am', name: 'አማርኛ (Amharic)', flag: '🇪🇹' },
   { code: 'en', name: 'English (ዓለም አቀፍ)', flag: '🌐' },
@@ -51,13 +58,17 @@ const SUPPORTED_LANGUAGES = [
   { code: 'sw', name: 'Kiswahili (Swahili)', flag: '🇰🇪' },
 ];
 
-export const GlobalAssemblyHero: React.FC = () => {
+export const GlobalAssemblyHero: React.FC<GlobalAssemblyHeroProps> = ({
+  onOpenMasterDashboard,
+  onOpenAuthGate,
+}) => {
   const {
     effectiveOnline,
     sendMessage,
     currentUser,
     broadcastVoiceAudio,
     userLanguage,
+    setUserLanguage,
     messages,
   } = useApp();
 
@@ -88,6 +99,13 @@ export const GlobalAssemblyHero: React.FC = () => {
   ]);
 
   const [isHeroExpanded, setIsHeroExpanded] = useState<boolean>(true);
+
+  // Synchronize language selection with entire website UI text
+  useEffect(() => {
+    if (userLanguage && userLanguage !== speakerLang) {
+      setSpeakerLang(userLanguage);
+    }
+  }, [userLanguage]);
 
   // Audio keep-alive heartbeat while Unlimited Listening Mode is active
   useEffect(() => {
@@ -296,18 +314,31 @@ export const GlobalAssemblyHero: React.FC = () => {
           </button>
         </div>
 
-        {/* Hero Banner Titles - Compact & Uncluttered */}
-        <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6 z-10 space-y-1">
-          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight drop-shadow-md">
-            Zebene's World •{' '}
-            <span className="bg-gradient-to-r from-amber-300 via-rose-300 to-amber-200 bg-clip-text text-transparent">
-              ዘበነ የመሰረተው አለም
-            </span>
-          </h1>
+        {/* Hero Banner Titles - Compact & Uncluttered with Master Dashboard button */}
+        <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6 z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight drop-shadow-md">
+              Zebene's World •{' '}
+              <span className="bg-gradient-to-r from-amber-300 via-rose-300 to-amber-200 bg-clip-text text-transparent">
+                ዘበነ የመሰረተው አለም
+              </span>
+            </h1>
 
-          <p className="text-xs sm:text-sm text-slate-300 font-semibold drop-shadow">
-            ዓለም አቀፍ የሉዓላዊ ዲሞክራሲ ጉባኤ • Universal Sovereign Diplomatic Assembly
-          </p>
+            <p className="text-xs sm:text-sm text-slate-300 font-semibold drop-shadow">
+              ዓለም አቀፍ የሉዓላዊ ዲሞክራሲ ጉባኤ • Universal Sovereign Diplomatic Assembly
+            </p>
+          </div>
+
+          {onOpenMasterDashboard && (
+            <button
+              type="button"
+              onClick={onOpenMasterDashboard}
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-amber-400 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black text-xs sm:text-sm shadow-xl shadow-amber-500/20 border border-amber-300/40 flex items-center gap-2 cursor-pointer transition-transform hover:scale-105 active:scale-95 shrink-0"
+            >
+              <Compass className="w-4 h-4 text-slate-950 animate-spin-slow" />
+              <span>🎛️ ዋና ዳሽቦርድ (Master Dashboard 1-10)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -330,7 +361,11 @@ export const GlobalAssemblyHero: React.FC = () => {
 
                 <select
                   value={speakerLang}
-                  onChange={(e) => setSpeakerLang(e.target.value)}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    setSpeakerLang(code);
+                    setUserLanguage(code);
+                  }}
                   className="bg-slate-900 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-indigo-500/40 focus:outline-none"
                 >
                   {SUPPORTED_LANGUAGES.map((l) => (
@@ -429,7 +464,11 @@ export const GlobalAssemblyHero: React.FC = () => {
                   </button>
                   <select
                     value={listenerLang}
-                    onChange={(e) => setListenerLang(e.target.value)}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setListenerLang(code);
+                      setUserLanguage(code);
+                    }}
                     className="bg-slate-900 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-emerald-500/40 focus:outline-none"
                   >
                     {SUPPORTED_LANGUAGES.map((l) => (

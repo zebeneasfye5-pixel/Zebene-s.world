@@ -21,12 +21,25 @@ import {
 } from 'lucide-react';
 
 export const BankingAndEconomy: React.FC = () => {
-  const { userWallet, makeWithdrawal, rewardUserAction, effectiveOnline, setActiveTab } = useApp();
+  const {
+    userWallet,
+    makeWithdrawal,
+    makeDeposit,
+    rewardUserAction,
+    effectiveOnline,
+    setActiveTab,
+    setIsMemberFinanceModalOpen,
+  } = useApp();
+
+  // Mode: withdraw or deposit
+  const [bankMode, setBankMode] = useState<'withdraw' | 'deposit'>('withdraw');
 
   // Bank payout states
   const [selectedBank, setSelectedBank] = useState('Commercial Bank of Ethiopia (CBE)');
-  const [accountNumber, setAccountNumber] = useState('1000123456789');
+  const [accountNumber, setAccountNumber] = useState('1000167413618');
   const [withdrawalAmount, setWithdrawalAmount] = useState<number>(500);
+  const [depositAmount, setDepositAmount] = useState<number>(1000);
+  const [depositReference, setDepositReference] = useState('');
   const [withdrawalStatus, setWithdrawalStatus] = useState<string | null>(null);
 
   // Microloan application state
@@ -206,69 +219,205 @@ export const BankingAndEconomy: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Building2 className="w-5 h-5 text-emerald-400" />
               <h3 className="font-bold text-sm text-slate-100">
-                Direct Withdrawal to Ethiopian & Global Accounts
+                የአባሉ የገቢና ወጪ ማዘዣ (Deposit & Withdrawal Terminal)
               </h3>
             </div>
-            <span className="text-xs text-emerald-400 font-bold">Instant Dispatch</span>
+            <button
+              type="button"
+              onClick={() => setIsMemberFinanceModalOpen(true)}
+              className="text-xs text-amber-300 font-bold hover:underline cursor-pointer"
+            >
+              ሙሉ የሂሳብ መዝገብ ክፈት ➔
+            </button>
           </div>
 
-          <form onSubmit={handleWithdrawal} className="space-y-4">
-            <div>
-              <label className="block text-xs text-slate-400 font-semibold mb-1">
-                Select Destination Bank / Provider:
-              </label>
-              <select
-                value={selectedBank}
-                onChange={(e) => setSelectedBank(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400"
-              >
-                <option value="Commercial Bank of Ethiopia (CBE)">Commercial Bank of Ethiopia (CBE / CBE Birr)</option>
-                <option value="Telebirr (Ethio Telecom)">Telebirr (Ethio Telecom Mobile Wallet)</option>
-                <option value="Awash Bank">Awash International Bank</option>
-                <option value="Dashen Bank">Dashen Bank / Amole</option>
-                <option value="Bank of Abyssinia">Bank of Abyssinia</option>
-                <option value="International Swift Wire">International Swift Wire (USD / EUR)</option>
-                <option value="PayPal / Visa">Global Visa / PayPal Gateway</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-400 font-semibold mb-1">
-                Account Number or Mobile Phone (የባንክ ሂሳብ ቁጥር):
-              </label>
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-400 font-semibold mb-1">
-                Withdrawal Amount (in ETB):
-              </label>
-              <input
-                type="number"
-                min="50"
-                max={userWallet.balanceBirr}
-                value={withdrawalAmount}
-                onChange={(e) => setWithdrawalAmount(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-bold"
-                required
-              />
-            </div>
-
+          {/* Toggle between Withdrawal & Deposit */}
+          <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl">
             <button
-              type="submit"
-              disabled={userWallet.balanceBirr <= 0}
-              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center space-x-2 active:scale-95"
+              type="button"
+              onClick={() => setBankMode('withdraw')}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                bankMode === 'withdraw'
+                  ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              <ArrowDownToLine className="w-4 h-4" />
-              <span>Withdraw Funds to {selectedBank.split(' ')[0]}</span>
+              ወጪ ማድረጊያ (Withdraw)
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => setBankMode('deposit')}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                bankMode === 'deposit'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              ገቢ ማድረጊያ (Deposit)
+            </button>
+          </div>
+
+          {bankMode === 'withdraw' ? (
+            <form onSubmit={handleWithdrawal} className="space-y-4">
+              <div>
+                <label className="block text-xs text-slate-400 font-semibold mb-1">
+                  የክፍያ መቀበያ ባንክ ይምረጡ (Select Destination Bank):
+                </label>
+                <select
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400"
+                >
+                  <option value="Commercial Bank of Ethiopia (CBE)">Commercial Bank of Ethiopia (CBE / CBE Birr)</option>
+                  <option value="Telebirr (Ethio Telecom)">Telebirr (Ethio Telecom Mobile Wallet)</option>
+                  <option value="Awash Bank">Awash International Bank</option>
+                  <option value="Dashen Bank">Dashen Bank / Amole</option>
+                  <option value="Bank of Abyssinia">Bank of Abyssinia</option>
+                  <option value="International Swift Wire">International Swift Wire (USD / EUR)</option>
+                  <option value="PayPal / Visa">Global Visa / PayPal Gateway</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-400 font-semibold">
+                    Account Number / Phone (የሂሳብ ቁጥር):
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBank('Commercial Bank of Ethiopia (CBE)');
+                      setAccountNumber('1000167413618');
+                    }}
+                    className="text-[11px] text-amber-300 hover:underline font-bold"
+                  >
+                    የክቡር ዘበነ አስፍዬ CBE (1000167413618)
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 font-semibold mb-1">
+                  Withdrawal Amount (in ETB):
+                </label>
+                <input
+                  type="number"
+                  min="50"
+                  max={userWallet.balanceBirr}
+                  value={withdrawalAmount}
+                  onChange={(e) => setWithdrawalAmount(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-bold"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={userWallet.balanceBirr <= 0}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 disabled:opacity-50 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-all flex items-center justify-center space-x-2 active:scale-95 cursor-pointer"
+              >
+                <ArrowDownToLine className="w-4 h-4 text-slate-950" />
+                <span>ወጪ አድርግ (Withdraw to {selectedBank.split(' ')[0]})</span>
+              </button>
+            </form>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (depositAmount <= 0) return;
+                const ok = makeDeposit(selectedBank, accountNumber, depositAmount, depositReference);
+                if (ok) {
+                  setWithdrawalStatus(`Deposit of ${depositAmount.toLocaleString()} ETB via ${selectedBank} completed successfully!`);
+                  setDepositReference('');
+                  setTimeout(() => setWithdrawalStatus(null), 6000);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs text-slate-400 font-semibold mb-1">
+                  ገንዘብ ገቢ የሚደረግበት መንገድ (Select Deposit Channel):
+                </label>
+                <select
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400"
+                >
+                  <option value="Commercial Bank of Ethiopia (CBE)">Commercial Bank of Ethiopia (CBE / CBE Birr)</option>
+                  <option value="Telebirr (Ethio Telecom)">Telebirr (Ethio Telecom Mobile Wallet)</option>
+                  <option value="Awash Bank">Awash International Bank</option>
+                  <option value="Dashen Bank">Dashen Bank / Amole</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-400 font-semibold">
+                    የከፋዩ የሂሳብ ቁጥር (Payer Account Number):
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBank('Commercial Bank of Ethiopia (CBE)');
+                      setAccountNumber('1000167413618');
+                    }}
+                    className="text-[11px] text-amber-300 hover:underline font-bold"
+                  >
+                    የክቡር ዘበነ አስፍዬ CBE (1000167413618)
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 font-semibold mb-1">
+                  ገቢ የሚደረግ የገንዘብ መጠን (Deposit Amount in ETB):
+                </label>
+                <input
+                  type="number"
+                  min="50"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(Number(e.target.value))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 font-semibold mb-1">
+                  የዝውውር ማረጋገጫ ቁጥር / ማስታወሻ (Reference - Optional):
+                </label>
+                <input
+                  type="text"
+                  value={depositReference}
+                  onChange={(e) => setDepositReference(e.target.value)}
+                  placeholder="ለምሳሌ፦ CBE-TRX-99824"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-xl text-xs shadow-lg transition-all flex items-center justify-center space-x-2 active:scale-95 cursor-pointer"
+              >
+                <ArrowDownToLine className="w-4 h-4 text-white" />
+                <span>ገቢ አድርግና ቀሪ ሂሳብን ጨምር (Deposit Funds)</span>
+              </button>
+            </form>
+          )}
 
           {withdrawalStatus && (
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 font-bold flex items-center space-x-2">

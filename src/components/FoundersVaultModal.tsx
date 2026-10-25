@@ -47,7 +47,7 @@ export const FoundersVaultModal: React.FC<FoundersVaultModalProps> = ({ isOpen, 
 
   // Withdrawal form states
   const [withdrawChannel, setWithdrawChannel] = useState('Commercial Bank of Ethiopia (CBE)');
-  const [withdrawAccount, setWithdrawAccount] = useState('1000192837465');
+  const [withdrawAccount, setWithdrawAccount] = useState('1000167413618');
   const [withdrawAmount, setWithdrawAmount] = useState<string>('50000');
   const [withdrawNote, setWithdrawNote] = useState('የገንቢው የትርፍ ድርሻ ወጪ / Developer Revenue Disbursal');
   const [confirmAuthPin, setConfirmAuthPin] = useState('');
@@ -471,7 +471,7 @@ export const FoundersVaultModal: React.FC<FoundersVaultModalProps> = ({ isOpen, 
                               } else if (ch.name.includes('Crypto')) {
                                 setWithdrawAccount('TN7xK8m9P2q1vZ...usdt');
                               } else if (ch.name.includes('CBE')) {
-                                setWithdrawAccount('1000192837465');
+                                setWithdrawAccount('1000167413618');
                               } else {
                                 setWithdrawAccount('200084729103');
                               }
@@ -503,7 +503,7 @@ export const FoundersVaultModal: React.FC<FoundersVaultModalProps> = ({ isOpen, 
                         type="text"
                         value={withdrawAccount}
                         onChange={(e) => setWithdrawAccount(e.target.value)}
-                        placeholder="ለምሳሌ: 1000192837465 ወይም 0911234567"
+                        placeholder="ለምሳሌ: 1000167413618 ወይም 0911234567"
                         className="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl px-3 py-2.5 text-xs text-white font-mono"
                         required
                       />

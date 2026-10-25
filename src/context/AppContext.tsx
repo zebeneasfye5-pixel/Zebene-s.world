@@ -29,9 +29,9 @@ export interface FounderWithdrawal {
   receiptNumber: string;
 }
 
-interface Transaction {
+export interface Transaction {
   id: string;
-  type: 'earning' | 'withdrawal' | 'donation' | 'lottery_win' | 'loan_disbursement';
+  type: 'earning' | 'withdrawal' | 'donation' | 'lottery_win' | 'loan_disbursement' | 'deposit';
   description: string;
   amountBirr: number;
   date: string;
@@ -99,9 +99,14 @@ interface AppContextType {
       note?: string
     ) => { success: boolean; message: string; withdrawal?: FounderWithdrawal };
   };
-  rewardUserAction: (actionType: 'like' | 'share' | 'speak' | 'game' | 'host') => void;
+  rewardUserAction: (actionType: 'like' | 'share' | 'speak' | 'game' | 'host' | 'comment' | 'login') => void;
+  makeDeposit: (channel: string, accountNumber: string, amountBirr: number, note?: string) => boolean;
   makeWithdrawal: (bankName: string, accountNumber: string, amountBirr: number) => boolean;
   makeDonation: (projectId: string, amountBirr: number) => boolean;
+  lastRewardToast: { amount: number; message: string; timestamp: number } | null;
+  dismissRewardToast: () => void;
+  isMemberFinanceModalOpen: boolean;
+  setIsMemberFinanceModalOpen: (open: boolean) => void;
   isRegistrationOpen: boolean;
   setIsRegistrationOpen: (open: boolean) => void;
 
@@ -368,6 +373,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isRegistrationOpen, setIsRegistrationOpen] = useState<boolean>(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState<boolean>(false);
   const [isTikil2ryaModalOpen, setIsTikil2ryaModalOpen] = useState<boolean>(false);
+  const [isMemberFinanceModalOpen, setIsMemberFinanceModalOpen] = useState<boolean>(false);
+  const [lastRewardToast, setLastRewardToast] = useState<{ amount: number; message: string; timestamp: number } | null>(null);
+
+  const dismissRewardToast = () => setLastRewardToast(null);
 
   // Modern Invitation & Embed Widget Controls
   const [isInviteModalOpen, setIsInviteModalOpen] = useState<boolean>(false);
@@ -865,7 +874,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         amountBirr: 50000.0,
         recipientName: 'ዘበነ አስፍዬ (Zebene Asfeye)',
         channel: 'Commercial Bank of Ethiopia (CBE)',
-        accountNumber: '1000192837465',
+        accountNumber: '1000167413618',
         referenceCode: 'CBE-DIR-2026-99214',
         receiptNumber: 'RCP-CBE-8821',
         date: '2026-10-10',
@@ -1457,29 +1466,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Activity rewards & revenue sharing
-  const rewardUserAction = (actionType: 'like' | 'share' | 'speak' | 'game' | 'host') => {
+  const rewardUserAction = (actionType: 'like' | 'share' | 'speak' | 'game' | 'host' | 'comment' | 'login') => {
     let grossReward = 0;
     let desc = '';
     switch (actionType) {
       case 'like':
         grossReward = 5.0;
-        desc = 'Community Engagement & Interaction Upvote';
+        desc = 'የላይክና የድጋፍ ተሳትፎ ገቢ (Interaction Upvote)';
         break;
       case 'share':
         grossReward = 15.0;
-        desc = 'Global Platform Sharing & Viral Invitation';
+        desc = 'የጥሪና ሊንክ ማጋራት ተሳትፎ ገቢ (Global Invitation Share)';
         break;
       case 'speak':
         grossReward = 20.0;
-        desc = 'Constructive Chamber Dialogue Contribution';
+        desc = 'የመድረክ ውይይትና ንግግር ተሳትፎ ገቢ (Chamber Dialogue Contribution)';
         break;
       case 'game':
-        grossReward = 50.0;
-        desc = 'Knowledge Arena High Score Achievement';
+        grossReward = 30.0;
+        desc = 'የገበጣና የጥበብ ፈተና ተሳትፎ ገቢ (Knowledge & Arena Achievement)';
         break;
       case 'host':
         grossReward = 100.0;
-        desc = 'Chamber Session Moderation & Assembly Leadership';
+        desc = 'የአዳራሽ አመራርና ዝግጅት ገቢ (Assembly Moderation)';
+        break;
+      case 'comment':
+        grossReward = 10.0;
+        desc = 'የአስተያየት ተሳትፎ ገቢ (Comment Wall Contribution)';
+        break;
+      case 'login':
+        grossReward = 25.0;
+        desc = 'ዕለታዊ የአባልነት ጉብኝት ቦነስ (Daily Member Attendance Bonus)';
         break;
     }
 
@@ -1501,11 +1518,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             date: new Date().toISOString().split('T')[0],
             status: 'completed' as const,
           },
-          ...prev.transactions.slice(0, 30),
+          ...prev.transactions.slice(0, 40),
         ],
       };
       localStorage.setItem('zw_user_wallet', JSON.stringify(updated));
       return updated;
+    });
+
+    setLastRewardToast({
+      amount: netUserEarning,
+      message: `${desc} • +${netUserEarning.toFixed(1)} ETB ተከፍሏል!`,
+      timestamp: Date.now(),
     });
 
     setFounderVaultStats((prev) => {
@@ -1519,6 +1542,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('zw_founder_vault_stats', JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const makeDeposit = (channel: string, accountNumber: string, amountBirr: number, note?: string): boolean => {
+    if (amountBirr <= 0) return false;
+
+    setUserWallet((prev) => {
+      const updated = {
+        ...prev,
+        balanceBirr: prev.balanceBirr + amountBirr,
+        lifetimeEarnedBirr: prev.lifetimeEarnedBirr + amountBirr,
+        transactions: [
+          {
+            id: `tx-dep-${Date.now()}`,
+            type: 'deposit' as const,
+            description: `ገቢ የተደረገ ሂሳብ (Deposit via ${channel}) - A/C: ${accountNumber}${note ? ` • ${note}` : ''}`,
+            amountBirr: amountBirr,
+            date: new Date().toISOString().split('T')[0],
+            method: channel,
+            status: 'completed' as const,
+          },
+          ...prev.transactions,
+        ],
+      };
+      localStorage.setItem('zw_user_wallet', JSON.stringify(updated));
+      return updated;
+    });
+
+    setLastRewardToast({
+      amount: amountBirr,
+      message: `በ${channel} ${amountBirr.toLocaleString()} ETB ገቢ በተሳካ ሁኔታ ተከናውኗል! (Deposit Completed)`,
+      timestamp: Date.now(),
+    });
+
+    return true;
   };
 
   const makeWithdrawal = (bankName: string, accountNumber: string, amountBirr: number): boolean => {
@@ -1614,6 +1671,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCurrentUser(updated);
     localStorage.setItem('zw_user_profile', JSON.stringify(updated));
+
+    // Auto-grant universal credentials across all 7 chambers
+    const univ = buildUniversalChamberRegs(updated);
+    setChamberRegistrations(univ);
+    localStorage.setItem('zw_chamber_registrations', JSON.stringify(univ));
+
+    // Also add to allRegisteredMembers if not present
+    setAllRegisteredMembers((prev) => {
+      const idx = prev.findIndex((m) => m.id === updated.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = updated;
+        localStorage.setItem('zw_all_registered_members', JSON.stringify(copy));
+        return copy;
+      }
+      const list = [updated, ...prev];
+      localStorage.setItem('zw_all_registered_members', JSON.stringify(list));
+      return list;
+    });
 
     setFounderVaultStats((prev) => {
       const next = {
@@ -1758,6 +1834,98 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const saveNuptialRecord = (record: NuptialWeddingRecord) => {
+    setNuptialRecords((prev) => {
+      const existingIdx = prev.findIndex((r) => r.covenantId === record.covenantId);
+      let updated: NuptialWeddingRecord[];
+      if (existingIdx >= 0) {
+        updated = [...prev];
+        updated[existingIdx] = record;
+      } else {
+        updated = [record, ...prev];
+      }
+      localStorage.setItem('zw_nuptial_records', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const addInvitedContact = (contact: InvitedContact) => {
+    setInvitedContacts((prev) => {
+      const updated = [contact, ...prev];
+      localStorage.setItem('zw_invited_contacts', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const adminToggleChamberLock = (chamberCode: number) => {
+    setChambersLocked((prev) => ({ ...prev, [chamberCode]: !prev[chamberCode] }));
+  };
+
+  const adminBroadcastDecree = async (decreeText: string) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const decreeMsg: ChamberMessage = {
+      id: `decree-${Date.now()}`,
+      chamberCode: activeChamberCode,
+      userId: 'usr-admin-founder',
+      userName: 'ክቡር ዘበነ አስፍዬ (Supreme Convener)',
+      userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      userNationality: 'Ethiopia 🇪🇹',
+      originalText: `[SOVEREIGN DECREE / ይፋዊ አዋጅ]: ${decreeText}`,
+      originalLanguage: 'Amharic',
+      translatedText: `[OFFICIAL EXECUTIVE DECREE]: ${decreeText}`,
+      timestamp,
+      isOfficial: true,
+    };
+
+    setMessagesByChamber((prev) => ({
+      ...prev,
+      [activeChamberCode]: [...(prev[activeChamberCode] || []), decreeMsg],
+    }));
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'new_chat_message',
+          chamberCode: activeChamberCode,
+          message: decreeMsg,
+        })
+      );
+    }
+  };
+
+  const adminResetChamberSeats = (chamberCode: number) => {
+    setSeatsByChamber((prev) => ({
+      ...prev,
+      [chamberCode]: createInitialSeats(chamberCode === 1 ? 36 : 24),
+    }));
+  };
+
+  const adminAddVerifiedMember = (member: Partial<UserProfile>) => {
+    const newMember: UserProfile = {
+      id: `usr-v-${Date.now().toString().slice(-4)}`,
+      fullName: member.fullName || 'አዲስ የተረጋገጠ አባል',
+      gender: member.gender || 'ወንድ (Male)',
+      age: member.age || 30,
+      phoneNumber: member.phoneNumber || '+251 90 000 0000',
+      address: member.address || 'አዲስ አበባ',
+      nationality: member.nationality || 'Ethiopia 🇪🇹',
+      photoUrl: member.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      faceVerified: true,
+      role: member.role || 'citizen',
+      preferredLanguage: member.preferredLanguage || 'am',
+      joinedAt: new Date().toISOString().split('T')[0],
+      balanceBirr: member.balanceBirr || 1500,
+      balanceUsd: member.balanceUsd || 25,
+      reputationPoints: 100,
+      isAuthenticated: true,
+    };
+    setAllRegisteredMembers((prev) => {
+      const updated = [newMember, ...prev];
+      localStorage.setItem('zw_all_registered_members', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1805,8 +1973,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           makeFounderWithdrawal,
         },
         rewardUserAction,
+        makeDeposit,
         makeWithdrawal,
         makeDonation,
+        lastRewardToast,
+        dismissRewardToast,
+        isMemberFinanceModalOpen,
+        setIsMemberFinanceModalOpen,
         isRegistrationOpen,
         setIsRegistrationOpen,
         chamberRegistrations,
@@ -1828,6 +2001,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isSimulatedOffline,
         effectiveOnline,
         toggleSimulateOffline,
+        isInviteModalOpen,
+        setIsInviteModalOpen,
+        isEmbedModalOpen,
+        setIsEmbedModalOpen,
+        nuptialRecords,
+        saveNuptialRecord,
+        invitedContacts,
+        addInvitedContact,
+        chambersLocked,
+        adminToggleChamberLock,
+        adminBroadcastDecree,
+        adminResetChamberSeats,
+        adminAddVerifiedMember,
+        allRegisteredMembers,
       }}
     >
       {children}

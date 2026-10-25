@@ -26,7 +26,12 @@ import {
   Key,
   LogOut,
   LogIn,
+  Compass,
+  Shield,
+  UserPlus,
+  Code2,
 } from 'lucide-react';
+import { getTranslation } from '../data/translations';
 
 interface NavbarProps {
   onOpenFounderVault: () => void;
@@ -34,6 +39,8 @@ interface NavbarProps {
   onOpenPlayStoreModal?: () => void;
   onOpenLegalModal?: () => void;
   onOpenTikil2ryaModal?: () => void;
+  onOpenMasterDashboard?: () => void;
+  onOpenAuthGate?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -42,6 +49,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPlayStoreModal,
   onOpenLegalModal,
   onOpenTikil2ryaModal,
+  onOpenMasterDashboard,
+  onOpenAuthGate,
 }) => {
   const {
     currentUser,
@@ -60,6 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     toggleSimulateOffline,
     legalCertificate,
     setIsTikil2ryaModalOpen,
+    setIsMemberFinanceModalOpen,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -212,20 +222,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* User Wallet Badge */}
+            {/* Master Sovereign Dashboard Button */}
+            {onOpenMasterDashboard && (
+              <button
+                onClick={onOpenMasterDashboard}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-400 hover:from-amber-400 hover:to-rose-400 text-slate-950 rounded-xl text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                title="ዋና ዳሽቦርድ (Master Sovereign Dashboard)"
+              >
+                <Compass className="w-3.5 h-3.5 text-slate-950" />
+                <span className="font-extrabold hidden xs:inline">🎛️ ዋና ዳሽቦርድ</span>
+              </button>
+            )}
+
+            {/* User Wallet Badge - Opens Personal Financial Ledger */}
             <button
-              onClick={() => setActiveTab('banking_economy')}
-              className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-xs font-semibold text-emerald-400 transition-colors"
+              onClick={() => setIsMemberFinanceModalOpen(true)}
+              className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-400 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+              title="የአባሉ የግል የሂሳብና የገቢ/ወጪ ሲስተም (Click to open Personal Wallet & Deposit/Withdraw)"
             >
-              <Wallet className="w-3.5 h-3.5" />
-              <span>{userWallet.balanceBirr.toLocaleString()} ETB</span>
+              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-mono">{userWallet.balanceBirr.toLocaleString()} ETB</span>
             </button>
 
             {/* Profile & Sign In / Sign Out */}
             {currentUser?.fullName && currentUser?.isAuthenticated !== false ? (
               <div className="flex items-center space-x-1.5">
                 <button
-                  onClick={() => setIsRegistrationOpen(true)}
+                  onClick={() => (onOpenAuthGate ? onOpenAuthGate() : setIsRegistrationOpen(true))}
                   className="flex items-center space-x-1.5 p-1 sm:px-2.5 sm:py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 transition-colors cursor-pointer"
                   title="የአባልነት መረጃ እና ፎቶ ማስተካከያ (Profile & Photo)"
                 >
@@ -242,7 +265,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
 
                 <button
-                  onClick={signOutUser}
+                  onClick={() => {
+                    signOutUser();
+                    if (onOpenAuthGate) onOpenAuthGate();
+                  }}
                   title="ከአካውንት ውጣ / ሳይን አውት (Sign Out)"
                   className="flex items-center space-x-1 px-2.5 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-white border border-rose-500/40 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                 >
@@ -252,7 +278,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <button
-                onClick={() => setIsRegistrationOpen(true)}
+                onClick={() => (onOpenAuthGate ? onOpenAuthGate() : setIsRegistrationOpen(true))}
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white rounded-lg text-xs font-bold shadow-md shadow-amber-500/20 transition-transform active:scale-95 cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
